@@ -14,7 +14,7 @@ const CloseIcon = () => (
 );
 
 const UploadImageIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B9001B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#898081ff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
         <circle cx="8.5" cy="8.5" r="1.5"></circle>
         <polyline points="21 15 16 10 5 21"></polyline>
@@ -269,7 +269,7 @@ export default function EditProductModal({
     const inputStyle: React.CSSProperties = {
         width: '100%',
         padding: '0.75rem 1rem',
-        border: '1px solid #ECA1A6',
+        border: '1px solid #898081ff',
         borderRadius: '8px',
         fontSize: '14px',
         color: '#111',
@@ -371,10 +371,10 @@ export default function EditProductModal({
                             {images.length < 8 && (
                                 <div
                                     onClick={() => fileInputRef.current?.click()}
-                                    style={{ width: '80px', height: '80px', borderRadius: '8px', border: '2px dashed #ECA1A6', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', gap: '4px' }}
+                                    style={{ width: '80px', height: '80px', borderRadius: '8px', border: '2px dashed #898081ff', backgroundColor: '#FAFAFA', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', gap: '4px' }}
                                 >
                                     <UploadImageIcon />
-                                    <span style={{ fontSize: '10px', color: '#B9001B', fontWeight: '600' }}>{uploading ? '...' : 'Add'}</span>
+                                    <span style={{ fontSize: '10px', color: '#898081ff', fontWeight: '600' }}>{uploading ? '...' : 'Add'}</span>
                                 </div>
                             )}
                         </div>
@@ -416,7 +416,7 @@ export default function EditProductModal({
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                         <div>
                             <label style={labelStyle}>Base Price {reqAsterisk}</label>
-                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ECA1A6', borderRadius: '8px', backgroundColor: '#FFF' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #898081ff', borderRadius: '8px', backgroundColor: '#FFF' }}>
                                 <span style={{ paddingLeft: '0.75rem', color: '#666', fontSize: '14px' }}>₦</span>
                                 <input
                                     type="number"
@@ -429,7 +429,7 @@ export default function EditProductModal({
                         </div>
                         <div>
                             <label style={labelStyle}>Discount Price</label>
-                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #ECA1A6', borderRadius: '8px', backgroundColor: '#FFF' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #898081ff', borderRadius: '8px', backgroundColor: '#FFF' }}>
                                 <span style={{ paddingLeft: '0.75rem', color: '#666', fontSize: '14px' }}>₦</span>
                                 <input
                                     type="number"

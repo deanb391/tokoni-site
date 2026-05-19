@@ -41,6 +41,34 @@ export async function getVendorProducts(
   return data.products || [];
 }
 
+export async function getVendorProductsPaginated(
+  vendor: string,
+  limit = 10,
+  cursor?: string
+): Promise<{ products: Product[]; nextCursor?: string; hasMore: boolean }> {
+  let url = `/api/products/list?vendor=${encodeURIComponent(vendor)}&limit=${limit}`;
+  if (cursor) {
+    url += `&cursor=${encodeURIComponent(cursor)}`;
+  }
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: jsonHeaders,
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to fetch products");
+  }
+
+  const data = await res.json();
+  return {
+    products: data.products || [],
+    nextCursor: data.nextCursor,
+    hasMore: data.hasMore || false,
+  };
+}
+
 export async function getProductById(
   productId: string
 ): Promise<Product> {

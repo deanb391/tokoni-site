@@ -3,6 +3,8 @@ import { Outfit, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import MainLayout from "@/components/MainLayout";
 import { UserProvider } from "@/context/UserContext";
+import { FeedProvider } from "@/context/FeedContext";
+import ExpandedPostContainer from "@/components/ExpandedPostContainer";
 
 const headingFont = Outfit({
   variable: "--font-heading",
@@ -33,7 +35,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <UserProvider>
-          <MainLayout>{children}</MainLayout>
+          <FeedProvider>
+            <MainLayout>{children}</MainLayout>
+            <ExpandedPostContainer />
+          </FeedProvider>
         </UserProvider>
       </body>
     </html>

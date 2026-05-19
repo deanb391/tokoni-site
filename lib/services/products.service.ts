@@ -105,6 +105,45 @@ export async function getProductsByVendorService(
   }
 }
 
+export async function getProductsByVendorPaginatedService(
+  vendor: string,
+  limit = 10,
+  cursor?: string
+): Promise<{ products: Product[]; nextCursor?: string; hasMore: boolean }> {
+  try {
+    const queries: any[] = [
+      Query.equal("vendor", vendor),
+      Query.orderDesc("$createdAt"),
+      Query.limit(limit),
+    ];
+
+    if (cursor) {
+      queries.push(Query.cursorAfter(cursor));
+    }
+
+    const res = await databases.listDocuments(
+      DATABASE_ID,
+      PRODUCTS_COLLECTION,
+      queries
+    );
+
+    const products = res.documents.map(mapProduct);
+    const nextCursor =
+      res.documents.length === limit
+        ? res.documents[res.documents.length - 1].$id
+        : undefined;
+
+    return {
+      products,
+      nextCursor,
+      hasMore: Boolean(nextCursor),
+    };
+  } catch (err) {
+    console.error("Error fetching vendor products paginated secure service:", err);
+    return { products: [], hasMore: false };
+  }
+}
+
 export async function editProductService(
   productId: string,
   updates: Partial<ProductDraft>

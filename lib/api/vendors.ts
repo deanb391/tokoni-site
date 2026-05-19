@@ -66,3 +66,18 @@ export async function hasVendorAccount(userId: string): Promise<boolean> {
     return false;
   }
 }
+
+export async function getVendorById(vendorId: string): Promise<Vendor> {
+  const res = await fetch(`/api/vendors/get?vendorId=${encodeURIComponent(vendorId)}`, {
+    method: "GET",
+    headers: jsonHeaders,
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to fetch vendor details");
+  }
+
+  const data = await res.json();
+  return data.data;
+}

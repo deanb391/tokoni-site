@@ -434,7 +434,7 @@ export default function MenuScreen() {
                         </div>
 
                         {/* Edit Profile Quick Trigger */}
-                        <div style={{ display: 'flex', gap: '0.75rem', width: mobile ? '100%' : 'auto' }}>
+                        {/* <div style={{ display: 'flex', gap: '0.75rem', width: mobile ? '100%' : 'auto' }}>
                             <button
                                 onClick={() => {
                                     setEditUsername(user.username || '');
@@ -461,7 +461,7 @@ export default function MenuScreen() {
                                 <EditIcon />
                                 Edit Profile
                             </button>
-                        </div>
+                        </div> */}
                     </div>
 
                     {/* Menu List Box */}

@@ -5,8 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { editVendor } from '@/lib/api/vendors';
 import { uploadToServer } from '@/lib/upload';
-import { getVendorProducts } from '@/lib/api/products';
 import EditProductModal from '@/components/EditProductModal';
+import FloatingActionButton from '@/components/FloatingActionButton';
+import { getVendorProducts, getVendorProductsPaginated, getProductById } from '@/lib/api/products';
+import { getVendorPosts } from '@/lib/api/posts';
+import PostCard from '@/components/PostCard';
 
 // --- Inline SVG Icons ---
 const SearchIcon = ({ color = "#666" }) => (
@@ -130,6 +133,20 @@ export default function VendorDashboardScreen() {
     const [selectedProductToEdit, setSelectedProductToEdit] = useState<any | null>(null);
     const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
 
+    // Products Pagination State
+    const [productsCursor, setProductsCursor] = useState('');
+    const [productsHasMore, setProductsHasMore] = useState(false);
+    const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
+
+    // Posts & Tagged Products State
+    const [posts, setPosts] = useState<any[]>([]);
+    const [postsLoading, setPostsLoading] = useState(false);
+    const [postsCursor, setPostsCursor] = useState('');
+    const [postsHasMore, setPostsHasMore] = useState(false);
+    const [loadingMorePosts, setLoadingMorePosts] = useState(false);
+    const [taggedProductsMap, setTaggedProductsMap] = useState<Record<string, any>>({});
+    const postsLoadedRef = useRef(false);
+
     // Edit Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [businessName, setBusinessName] = useState('');
@@ -161,14 +178,16 @@ export default function VendorDashboardScreen() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Load actual vendor products
+    // Load actual vendor products in batches
     useEffect(() => {
         const loadProducts = async () => {
             if (!vendor?.$id) return;
             setProductsLoading(true);
             try {
-                const list = await getVendorProducts(vendor.$id);
-                setProducts(list);
+                const res = await getVendorProductsPaginated(vendor.$id, 10);
+                setProducts(res.products);
+                setProductsCursor(res.nextCursor || '');
+                setProductsHasMore(res.hasMore);
             } catch (err) {
                 console.error("Failed to load vendor products:", err);
             } finally {
@@ -179,6 +198,85 @@ export default function VendorDashboardScreen() {
             loadProducts();
         }
     }, [vendor]);
+
+    // Load actual vendor posts in batches
+    useEffect(() => {
+        const loadInitialPosts = async () => {
+            if (!vendor?.$id || postsLoadedRef.current) return;
+            setPostsLoading(true);
+            try {
+                const res = await getVendorPosts(vendor.$id, 10);
+                setPosts(res.posts);
+                setPostsCursor(res.nextCursor || '');
+                setPostsHasMore(res.hasMore);
+                postsLoadedRef.current = true;
+
+                // Hydrate tagged products info
+                const allProductIds = Array.from(new Set(res.posts.flatMap(p => p.taggedProducts)));
+                if (allProductIds.length > 0) {
+                    const fetchedProducts = await Promise.all(
+                        allProductIds.map(id => getProductById(id).catch(() => null))
+                    );
+                    const newMap: Record<string, any> = {};
+                    fetchedProducts.forEach(p => {
+                        if (p) newMap[p.$id] = p;
+                    });
+                    setTaggedProductsMap(newMap);
+                }
+            } catch (err) {
+                console.error("Failed to load vendor posts:", err);
+            } finally {
+                setPostsLoading(false);
+            }
+        };
+        if (vendor?.$id && activeTab === 'Posts') {
+            loadInitialPosts();
+        }
+    }, [vendor, activeTab]);
+
+    const handleLoadMoreProducts = async () => {
+        if (!vendor?.$id || loadingMoreProducts || !productsCursor) return;
+        setLoadingMoreProducts(true);
+        try {
+            const res = await getVendorProductsPaginated(vendor.$id, 10, productsCursor);
+            setProducts(prev => [...prev, ...res.products]);
+            setProductsCursor(res.nextCursor || '');
+            setProductsHasMore(res.hasMore);
+        } catch (err) {
+            console.error("Error loading more products:", err);
+        } finally {
+            setLoadingMoreProducts(false);
+        }
+    };
+
+    const handleLoadMorePosts = async () => {
+        if (!vendor?.$id || loadingMorePosts || !postsCursor) return;
+        setLoadingMorePosts(true);
+        try {
+            const res = await getVendorPosts(vendor.$id, 10, postsCursor);
+            setPosts(prev => [...prev, ...res.posts]);
+            setPostsCursor(res.nextCursor || '');
+            setPostsHasMore(res.hasMore);
+
+            // Hydrate newly fetched tagged products info
+            const allProductIds = Array.from(new Set(res.posts.flatMap(p => p.taggedProducts)));
+            const newProductIds = allProductIds.filter(id => !taggedProductsMap[id]);
+            if (newProductIds.length > 0) {
+                const fetchedProducts = await Promise.all(
+                    newProductIds.map(id => getProductById(id).catch(() => null))
+                );
+                const newMap = { ...taggedProductsMap };
+                fetchedProducts.forEach(p => {
+                    if (p) newMap[p.$id] = p;
+                });
+                setTaggedProductsMap(newMap);
+            }
+        } catch (err) {
+            console.error("Error loading more posts:", err);
+        } finally {
+            setLoadingMorePosts(false);
+        }
+    };
 
     // Redirect unauthenticated user
     useEffect(() => {
@@ -335,7 +433,7 @@ export default function VendorDashboardScreen() {
     }
 
     const mobile = mounted ? isMobile : false;
-    const tabs = ['Products', 'Orders', 'Analytics', 'Followers', 'Settings'];
+    const tabs = ['Products', 'Posts', 'Analytics', 'Followers', 'Settings'];
 
     // Products and mock states mapped dynamically
 
@@ -504,73 +602,159 @@ export default function VendorDashboardScreen() {
                                 </button>
                             </div>
                         ) : (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem', width: '100%' }}>
-                                {products.map((prod) => {
-                                    const isAvailable = prod.available;
-                                    const badgeText = !isAvailable 
-                                        ? "Draft" 
-                                        : prod.stock > 0 
-                                            ? `In Stock (${prod.stock})` 
-                                            : "Out of Stock";
-                                    const badgeColor = !isAvailable 
-                                        ? "#4b5563" 
-                                        : prod.stock > 0 
-                                            ? "#B9001B" 
-                                            : "#ef4444";
-                                    const badgeBg = !isAvailable 
-                                        ? "#f3f4f6" 
-                                        : prod.stock > 0 
-                                            ? "#FFF0F2" 
-                                            : "#fee2e2";
+                            <>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem', width: '100%' }}>
+                                    {products.map((prod) => {
+                                        const isAvailable = prod.available;
+                                        const badgeText = !isAvailable 
+                                            ? "Draft" 
+                                            : prod.stock > 0 
+                                                ? `In Stock (${prod.stock})` 
+                                                : "Out of Stock";
+                                        const badgeColor = !isAvailable 
+                                            ? "#4b5563" 
+                                            : prod.stock > 0 
+                                                ? "#B9001B" 
+                                                : "#ef4444";
+                                        const badgeBg = !isAvailable 
+                                            ? "#f3f4f6" 
+                                            : prod.stock > 0 
+                                                ? "#FFF0F2" 
+                                                : "#fee2e2";
 
-                                    return (
-                                        <div key={prod.$id} style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #EDEDED', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer' }}>
-                                            <div onClick={() => router.push(`/product/${prod.$id}`)} style={{ width: '100%', height: '300px', backgroundColor: '#F3F4F6', position: 'relative', overflow: 'hidden' }}>
-                                                {prod.images && prod.images.length > 0 ? (
-                                                    <img src={prod.images[0]} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                ) : (
-                                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        <ImageIcon />
-                                                    </div>
-                                                )}
-                                                <div style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: badgeBg, color: badgeColor, padding: '4px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
-                                                    {badgeText}
-                                                </div>
-                                            </div>
-                                            <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                                                <h3 onClick={() => router.push(`/product/${prod.$id}`)} style={{ fontSize: '16px', fontWeight: '600', color: '#111', margin: '0 0 0.5rem 0' }}>{prod.name}</h3>
-                                                <span onClick={() => router.push(`/product/${prod.$id}`)} style={{ fontSize: '15px', color: '#444', fontWeight: '600', marginBottom: '1rem' }}>
-                                                    ₦{prod.price.toFixed(2)}
-                                                    {prod.discountPrice && (
-                                                        <span style={{ textDecoration: 'line-through', color: '#888', fontSize: '13px', marginLeft: '8px', fontWeight: '400' }}>
-                                                            ₦{prod.discountPrice.toFixed(2)}
-                                                        </span>
+                                        return (
+                                            <div key={prod.$id} style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #EDEDED', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer' }}>
+                                                <div onClick={() => router.push(`/product/${prod.$id}`)} style={{ width: '100%', height: '300px', backgroundColor: '#F3F4F6', position: 'relative', overflow: 'hidden' }}>
+                                                    {prod.images && prod.images.length > 0 ? (
+                                                        <img src={prod.images[0]} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    ) : (
+                                                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <ImageIcon />
+                                                        </div>
                                                     )}
-                                                </span>
-                                                <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '13px', color: '#666' }}>Stock: {prod.stock}</span>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSelectedProductToEdit(prod);
-                                                            setIsEditProductModalOpen(true);
-                                                        }}
-                                                        style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', color: '#B9001B', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
-                                                    >
-                                                        <EditPencilIcon />
-                                                        Edit
-                                                    </button>
+                                                    <div style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: badgeBg, color: badgeColor, padding: '4px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
+                                                        {badgeText}
+                                                    </div>
+                                                </div>
+                                                <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                                    <h3 onClick={() => router.push(`/product/${prod.$id}`)} style={{ fontSize: '16px', fontWeight: '600', color: '#111', margin: '0 0 0.5rem 0' }}>{prod.name}</h3>
+                                                    <span onClick={() => router.push(`/product/${prod.$id}`)} style={{ fontSize: '15px', color: '#444', fontWeight: '600', marginBottom: '1rem' }}>
+                                                        ₦{prod.price.toFixed(2)}
+                                                        {prod.discountPrice && (
+                                                            <span style={{ textDecoration: 'line-through', color: '#888', fontSize: '13px', marginLeft: '8px', fontWeight: '400' }}>
+                                                                ₦{prod.discountPrice.toFixed(2)}
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                    <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <span style={{ fontSize: '13px', color: '#666' }}>Stock: {prod.stock}</span>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedProductToEdit(prod);
+                                                                setIsEditProductModalOpen(true);
+                                                            }}
+                                                            style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', color: '#B9001B', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+                                                        >
+                                                            <EditPencilIcon />
+                                                            Edit
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
+                                {productsHasMore && (
+                                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2.5rem', width: '100%' }}>
+                                        <button
+                                            onClick={handleLoadMoreProducts}
+                                            disabled={loadingMoreProducts}
+                                            style={{
+                                                padding: '0.75rem 2rem',
+                                                backgroundColor: '#FFFFFF',
+                                                color: '#B9001B',
+                                                border: '1px solid #B9001B',
+                                                borderRadius: '25px',
+                                                fontSize: '14px',
+                                                fontWeight: '600',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                transition: 'all 0.2s',
+                                            }}
+                                        >
+                                            {loadingMoreProducts ? 'Loading...' : 'Load More Products'}
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </>
+                )}
+
+                {activeTab === 'Posts' && (
+                    <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#111', margin: 0 }}>Your Posts</h2>
+                        </div>
+
+                        {postsLoading ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem', width: '100%' }}>
+                                <div style={{ width: '30px', height: '30px', border: '3px solid #E5E7EB', borderTop: '3px solid #B9001B', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                            </div>
+                        ) : posts.length === 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EDEDED', textAlign: 'center', width: '100%', boxSizing: 'border-box' }}>
+                                <span style={{ fontSize: '48px', marginBottom: '1rem' }}>📸</span>
+                                <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#111', margin: '0 0 0.5rem 0' }}>No Posts Published</h3>
+                                <p style={{ fontSize: '14.5px', color: '#666', maxWidth: '380px', margin: '0 0 1.5rem 0', lineHeight: '1.5' }}>
+                                    You haven't shared any posts yet. Click the "+" button to publish your first post!
+                                </p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', width: '100%', maxWidth: '540px', margin: '0 auto' }}>
+                                {posts.map((post) => (
+                                    <PostCard
+                                        key={post.$id}
+                                        post={post}
+                                        vendorName={vendor.businessName}
+                                        vendorLogo={vendor.logoImage}
+                                        taggedProductsMap={taggedProductsMap}
+                                        currentUserId={user?.$id}
+                                    />
+                                ))}
+
+                                {postsHasMore && (
+                                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem', width: '100%' }}>
+                                        <button
+                                            onClick={handleLoadMorePosts}
+                                            disabled={loadingMorePosts}
+                                            style={{
+                                                padding: '0.75rem 2rem',
+                                                backgroundColor: '#FFFFFF',
+                                                color: '#B9001B',
+                                                border: '1px solid #B9001B',
+                                                borderRadius: '25px',
+                                                fontSize: '14px',
+                                                fontWeight: '600',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                transition: 'all 0.2s',
+                                            }}
+                                        >
+                                            {loadingMorePosts ? 'Loading...' : 'Load More Posts'}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </>
                 )}
 
-                {activeTab !== 'Products' && (
+                {activeTab !== 'Products' && activeTab !== 'Posts' && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EDEDED', textAlign: 'center' }}>
                         <span style={{ fontSize: '48px', marginBottom: '1rem' }}>📦</span>
                         <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#111', margin: '0 0 0.5rem 0' }}>{activeTab} Management</h3>
@@ -583,31 +767,7 @@ export default function VendorDashboardScreen() {
             </main>
 
             {/* ================= FLOATING ACTION BUTTON ================= */}
-            <button
-                onClick={() => router.push('/dashboard/product/add')}
-                style={{
-                    position: 'fixed',
-                    bottom: '2rem',
-                    right: mobile ? '1.5rem' : '3rem',
-                    backgroundColor: '#B9001B',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '30px',
-                    padding: '1rem 1.5rem',
-                    fontSize: '15px',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 15px rgba(185, 0, 27, 0.3)',
-                    zIndex: 100,
-                    transition: 'transform 0.2s, background-color 0.2s'
-                }}
-            >
-                <PlusIcon />
-                Add Product
-            </button>
+            <FloatingActionButton />
 
             {/* ================= EDIT PROFILE MODAL ================= */}
             {isEditModalOpen && (
