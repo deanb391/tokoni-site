@@ -22,6 +22,7 @@ export default function ExpandedPostContainer() {
   } = useFeed();
 
   const [activeMediaIndexes, setActiveMediaIndexes] = useState<Record<string, number>>({});
+  const [captionOverlayPostId, setCaptionOverlayPostId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
@@ -29,6 +30,7 @@ export default function ExpandedPostContainer() {
   useEffect(() => {
     if (expandedPostIndex !== null) {
       setHighestViewedIndex(expandedPostIndex);
+      setCaptionOverlayPostId(null);
     }
   }, [expandedPostIndex]);
 
@@ -113,19 +115,25 @@ export default function ExpandedPostContainer() {
             <div
               key={post.$id}
               ref={el => { itemRefs.current[idx] = el; }}
-              className="w-full h-full min-h-screen flex-shrink-0 snap-start flex items-center justify-center relative bg-black border-b border-white/5"
+              className="w-full h-full flex-shrink-0 snap-start flex items-center justify-center relative bg-black"
             >
               {/* Media Section */}
               <div className="w-full h-full flex items-center justify-center relative">
                 {post.type === "video" ? (
                   <video
                     src={post.media[0]}
-                    controls
                     autoPlay={idx === expandedPostIndex}
                     loop
-                    muted
                     playsInline
-                    className="w-full h-full object-contain"
+                    onClick={(e) => {
+                      const v = e.currentTarget;
+                      if (v.paused) {
+                        v.play().catch(() => {});
+                      } else {
+                        v.pause();
+                      }
+                    }}
+                    className="w-full h-full object-contain cursor-pointer"
                   />
                 ) : (
                   <div className="relative w-full h-full flex items-center justify-center">
@@ -187,9 +195,21 @@ export default function ExpandedPostContainer() {
                   </div>
 
                   {post.caption && (
-                    <p className="text-xs text-neutral-200 line-clamp-3 leading-relaxed">
-                      {post.caption}
-                    </p>
+                    <div className="text-xs text-neutral-200 leading-relaxed max-w-full break-words whitespace-pre-wrap">
+                      {post.caption.length <= 120 ? (
+                        post.caption
+                      ) : (
+                        <div>
+                          {post.caption.slice(0, 120)}...
+                          <button
+                            onClick={() => setCaptionOverlayPostId(post.$id)}
+                            className="text-white/60 font-bold ml-1 hover:text-white cursor-pointer"
+                          >
+                            more
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   {/* Tagged Products list */}
@@ -212,6 +232,39 @@ export default function ExpandedPostContainer() {
                     </div>
                   )}
                 </div>
+
+                {/* Bottom Sheet Caption Overlay */}
+                {captionOverlayPostId === post.$id && (
+                  <div className="absolute bottom-0 left-[5%] w-[90%] h-[50%] bg-neutral-900/95 backdrop-blur-md rounded-t-2xl z-30 border-t border-l border-r border-white/10 p-5 flex flex-col text-white animate-slide-up">
+                    {/* Header */}
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-red-600 overflow-hidden flex items-center justify-center border border-white/20">
+                          {vendor?.logoImage ? (
+                            <img src={vendor.logoImage} alt={vendor.businessName} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-[10px] font-extrabold text-white">
+                              {vendor?.businessName?.slice(0, 2).toUpperCase() || "TK"}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs font-bold truncate max-w-[180px]">
+                          {vendor?.businessName || "Tokoni Vendor"}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => setCaptionOverlayPostId(null)}
+                        className="text-neutral-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition-all cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {/* Scrollable Text Body */}
+                    <div className="flex-1 overflow-y-auto mt-4 pr-1 text-xs text-neutral-200 leading-relaxed break-words whitespace-pre-wrap scrollbar-thin">
+                      {post.caption}
+                    </div>
+                  </div>
+                )}
 
                 {/* Action Sidebar (Right overlay) */}
                 <div className="absolute right-3 bottom-1/4 flex flex-col gap-5 items-center z-20 text-white">

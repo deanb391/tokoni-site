@@ -28,6 +28,7 @@ export default function PostCard({
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(currentUserId ? post.likedBy.includes(currentUserId) : false);
   const [likesCount, setLikesCount] = useState(post.likes);
+  const [captionExpanded, setCaptionExpanded] = useState(false);
 
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -193,9 +194,31 @@ export default function PostCard({
           {likesCount.toLocaleString()} likes
         </div>
         {post.caption && (
-          <div className="text-neutral-800 leading-normal font-medium">
+          <div className="text-neutral-800 leading-normal font-medium break-words whitespace-pre-wrap">
             <span className="font-extrabold text-neutral-900 mr-2">{vendorName}</span>
-            {post.caption}
+            {post.caption.length <= 120 || captionExpanded ? (
+              <>
+                {post.caption}
+                {post.caption.length > 120 && (
+                  <button
+                    onClick={() => setCaptionExpanded(false)}
+                    className="text-neutral-400 font-bold ml-1.5 hover:text-neutral-600 animate-fade-in"
+                  >
+                    show less
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                {post.caption.slice(0, 120)}...
+                <button
+                  onClick={() => setCaptionExpanded(true)}
+                  className="text-neutral-400 font-bold ml-1 hover:text-neutral-600"
+                >
+                  more
+                </button>
+              </>
+            )}
           </div>
         )}
 
