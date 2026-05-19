@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 const BRAND_RED = "#B9001B";
 
 export default function ProductExploreScreen() {
+  const router = useRouter();
   const [activeCategory, setActiveCategory] = useState('All Categories');
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -25,7 +27,7 @@ export default function ProductExploreScreen() {
     {
       id: 1,
       name: 'Aero Glide Performance',
-      price: '$189',
+      price: '₦189',
       tag: 'New Arrival',
       desc: 'Lightweight performance sneakers with responsive cushioning, perfect for running.',
       location: 'New York, NY',
@@ -40,7 +42,7 @@ export default function ProductExploreScreen() {
     {
       id: 2,
       name: 'Chrono Series Smartwatch',
-      price: '$299',
+      price: '₦299',
       tag: null,
       desc: 'Advanced fitness tracking with an always-on retina display and premium ceramic finish.',
       location: 'Los Angeles, CA',
@@ -56,8 +58,8 @@ export default function ProductExploreScreen() {
     {
       id: 3,
       name: 'Sonic Quiet Headphones',
-      price: '$349',
-      oldPrice: '$410',
+      price: '₦349',
+      oldPrice: '₦410',
       tag: '15% OFF',
       tagColor: '#ffffff',
       tagBg: BRAND_RED,
@@ -76,7 +78,7 @@ export default function ProductExploreScreen() {
     {
       id: 4,
       name: 'Retro Snap 90 Camera',
-      price: '$120',
+      price: '₦120',
       tag: null,
       desc: 'Classic instant film camera refurbished to perfect working condition. Includes film packs.',
       location: 'Austin, TX',
@@ -247,6 +249,7 @@ export default function ProductExploreScreen() {
           {products.map((prod) => (
             <div
               key={prod.id}
+              onClick={() => router.push(`/product/${prod.id}`)}
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -278,6 +281,7 @@ export default function ProductExploreScreen() {
 
                 {/* Favorite Button */}
                 <button
+                  onClick={(e) => e.stopPropagation()}
                   style={{
                     position: 'absolute',
                     top: '1rem',

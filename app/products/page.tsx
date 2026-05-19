@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function ExploreProductsScreen() {
+    const router = useRouter();
     const [isMobile, setIsMobile] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [activeCategory, setActiveCategory] = useState('All Categories');
@@ -24,7 +26,7 @@ export default function ExploreProductsScreen() {
         {
             id: 1,
             name: 'Aero Glide P...',
-            price: '$189',
+            price: '₦189',
             tag: 'New Arrival',
             desc: 'Lightweight performance sneakers with responsive... cushioning and breathable',
             location: 'New York, NY',
@@ -39,7 +41,7 @@ export default function ExploreProductsScreen() {
         {
             id: 2,
             name: 'Chrono Seri...',
-            price: '$299',
+            price: '₦299',
             tag: null,
             desc: 'Advanced fitness tracking with an always-on retina display an... premium ceramic finish',
             location: 'Los Angeles, CA',
@@ -55,8 +57,8 @@ export default function ExploreProductsScreen() {
         {
             id: 3,
             name: 'Sonic Quiet...',
-            price: '$349',
-            oldPrice: '$410',
+            price: '₦349',
+            oldPrice: '₦410',
             tag: '15% OFF',
             tagColor: '#B9001B',
             tagBg: '#FFFFFF',
@@ -75,7 +77,7 @@ export default function ExploreProductsScreen() {
         {
             id: 4,
             name: 'Retro Snap 90',
-            price: '$120',
+            price: '₦120',
             tag: null,
             desc: 'Classic instant film camera refurbished to perfect workin... condition. Includes 2 packs of',
             location: 'Austin, TX',
@@ -158,7 +160,11 @@ export default function ExploreProductsScreen() {
                     }}
                 >
                     {products.map((prod) => (
-                        <div key={prod.id} style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                        <div
+                            key={prod.id}
+                            onClick={() => router.push(`/product/${prod.id}`)}
+                            style={{ display: 'flex', flexDirection: 'column', position: 'relative', cursor: 'pointer' }}
+                        >
 
                             <div
                                 style={{
@@ -176,6 +182,7 @@ export default function ExploreProductsScreen() {
                                 {prod.element}
 
                                 <button
+                                    onClick={(e) => e.stopPropagation()}
                                     style={{
                                         position: 'absolute', top: '14px', right: '14px', backgroundColor: '#FFFFFF', border: 'none', width: '34px', height: '34px',
                                         borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)'

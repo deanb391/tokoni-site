@@ -110,27 +110,27 @@ export default function Header() {
           top: 0,
           zIndex: 50,
           display: 'flex',
-          flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: mobile ? '0 1.25rem' : '0 4rem',
-          height: '70px',
-          backgroundColor: 'rgba(255, 255, 255, 0.98)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          borderBottom: '1px solid #f0f0f0',
+          height: '72px', // Slightly taller for breathing room
+          backgroundColor: 'rgba(255, 255, 255, 0.85)', // More transparent for better blur
+          backdropFilter: 'saturate(180%) blur(16px)',
+          WebkitBackdropFilter: 'saturate(180%) blur(16px)',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
           boxSizing: 'border-box',
-          boxShadow: mobile ? 'none' : '0 1px 2px rgba(0,0,0,0.02)',
+          boxShadow: mobile ? 'none' : '0 4px 30px rgba(0, 0, 0, 0.03)', // Softer, wider shadow
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
         }}
       >
         {/* Logo */}
         <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-          <Image 
-            src={logoImg} 
-            alt="Tokoni Logo" 
-            height={mobile ? 28 : 32} 
-            style={{ objectFit: 'contain', width: 'auto' }} 
-            priority 
+          <Image
+            src={logoImg}
+            alt="Tokoni Logo"
+            height={mobile ? 24 : 28} // Slightly smaller logo for premium subtlety
+            style={{ objectFit: 'contain', width: 'auto' }}
+            priority
           />
         </Link>
 
@@ -154,30 +154,29 @@ export default function Header() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
+                    gap: '0.375rem',
                     fontSize: '0.9rem',
                     fontWeight: isActive ? '600' : '500',
                     color: color,
                     textDecoration: 'none',
                     height: '100%',
                     position: 'relative',
-                    transition: 'all 0.2s ease',
+                    transition: 'color 0.2s ease',
                     whiteSpace: 'nowrap'
                   }}
                 >
                   {link.icon(color, isActive)}
                   {link.name}
-                  {/* Active Indicator Line */}
+                  {/* Active Indicator Line - Made softer and rounded */}
                   {isActive && (
                     <div style={{
                       position: 'absolute',
                       bottom: 0,
-                      left: 0,
-                      right: 0,
+                      left: '10%',
+                      right: '10%', // Doesn't stretch all the way to the edges
                       height: '3px',
                       backgroundColor: BRAND_RED,
-                      borderTopLeftRadius: '3px',
-                      borderTopRightRadius: '3px'
+                      borderRadius: '3px 3px 0 0'
                     }} />
                   )}
                 </Link>
@@ -188,7 +187,7 @@ export default function Header() {
 
         {/* Actions */}
         {!mobile ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             {user ? (
               <>
                 {user?.isVendor || vendor ? (
@@ -199,11 +198,11 @@ export default function Header() {
                       fontWeight: '600',
                       color: BRAND_RED,
                       textDecoration: 'none',
-                      border: `1.5px solid ${BRAND_RED}`,
-                      borderRadius: '999px',
-                      padding: '0.5rem 1.25rem',
+                      borderRadius: '9999px',
+                      padding: '0.625rem 1.5rem',
                       backgroundColor: '#fff1f2',
-                      transition: 'all 0.2s ease'
+                      transition: 'background-color 0.2s ease',
+                      boxShadow: 'inset 0 0 0 1px rgba(185, 0, 27, 0.1)' // Sharper than a standard border
                     }}
                   >
                     Dashboard
@@ -217,58 +216,64 @@ export default function Header() {
                       color: '#ffffff',
                       textDecoration: 'none',
                       backgroundColor: BRAND_RED,
-                      borderRadius: '999px',
-                      padding: '0.5rem 1.25rem',
-                      transition: 'opacity 0.2s ease'
+                      borderRadius: '9999px',
+                      padding: '0.625rem 1.5rem',
+                      transition: 'opacity 0.2s ease',
+                      boxShadow: '0 2px 4px rgba(185, 0, 27, 0.2)'
                     }}
                   >
                     Sell on Tokoni
                   </Link>
                 )}
 
-                <button 
+                <button
                   onClick={handleLogout}
-                  style={{ 
-                    background: '#f3f4f6', 
-                    border: 'none', 
-                    cursor: 'pointer', 
-                    position: 'relative', 
-                    width: '36px',
-                    height: '36px',
+                  style={{
+                    background: '#f3f4f6',
+                    border: 'none',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    width: '40px', // Slightly larger touch target
+                    height: '40px',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    transition: 'background-color 0.2s ease'
+                    transition: 'background-color 0.2s ease',
+                    marginLeft: '0.5rem'
                   }}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1f2937" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                     <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                   </svg>
-                  <span style={{ 
-                    position: 'absolute', 
-                    top: '8px', 
-                    right: '8px', 
-                    width: '8px', 
-                    height: '8px', 
-                    backgroundColor: BRAND_RED, 
+                  <span style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    width: '8px',
+                    height: '8px',
+                    backgroundColor: BRAND_RED,
                     borderRadius: '50%',
                     border: '2px solid #f3f4f6'
                   }}></span>
                 </button>
               </>
             ) : (
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <Link
                   href="/signin"
                   style={{
                     fontSize: '0.875rem',
                     fontWeight: '600',
-                    color: '#4b5563',
+                    color: '#374151',
                     textDecoration: 'none',
-                    padding: '0.5rem'
+                    padding: '0.625rem 1rem',
+                    borderRadius: '9999px',
+                    transition: 'background-color 0.2s ease'
                   }}
+                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   Sign In
                 </Link>
@@ -280,9 +285,10 @@ export default function Header() {
                     color: '#ffffff',
                     textDecoration: 'none',
                     backgroundColor: BRAND_RED,
-                    borderRadius: '999px',
-                    padding: '0.5rem 1.25rem',
-                    boxShadow: '0 2px 4px rgba(185, 0, 27, 0.2)'
+                    borderRadius: '9999px',
+                    padding: '0.625rem 1.5rem',
+                    boxShadow: '0 2px 4px rgba(185, 0, 27, 0.2)',
+                    transition: 'opacity 0.2s ease'
                   }}
                 >
                   Sign Up
@@ -291,58 +297,66 @@ export default function Header() {
             )}
           </div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {/* Notification Icon for Mobile (optional, but good for UX) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             {user && (
-               <button 
-                 style={{ 
-                   background: '#f3f4f6', 
-                   border: 'none', 
-                   cursor: 'pointer', 
-                   position: 'relative', 
-                   width: '36px',
-                   height: '36px',
-                   borderRadius: '50%',
-                   display: 'flex',
-                   alignItems: 'center',
-                   justifyContent: 'center'
-                 }}
-               >
-                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1f2937" strokeWidth="2">
-                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                   <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                 </svg>
-                 <span style={{ 
-                   position: 'absolute', 
-                   top: '8px', 
-                   right: '8px', 
-                   width: '8px', 
-                   height: '8px', 
-                   backgroundColor: BRAND_RED, 
-                   borderRadius: '50%',
-                   border: '2px solid #f3f4f6'
-                 }}></span>
-               </button>
+              <button
+                style={{
+                  background: '#f9fafb',
+                  border: '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  width: '8px',
+                  height: '8px',
+                  backgroundColor: BRAND_RED,
+                  borderRadius: '50%',
+                  border: '2px solid #ffffff'
+                }}></span>
+              </button>
             )}
-            <button 
+            <button
               onClick={() => setMenuOpen(true)}
-              style={{ 
-                background: 'none', 
-                border: 'none', 
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e5e7eb',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '0.25rem'
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                WebkitTapHighlightColor: 'transparent'
               }}
             >
-              <Menu size={28} color="#1f2937" />
+              {/* Using a custom, elegant SVG for the hamburger menu */}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="15" y2="18"></line>
+              </svg>
             </button>
           </div>
         )}
       </header>
 
-      {/* Mobile Drawer (Escaping the header's backdrop-filter containing block!) */}
+      {/* Mobile Drawer */}
       {mobile && (
         <>
           {/* Backdrop */}
@@ -354,13 +368,13 @@ export default function Header() {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.4)',
+              backgroundColor: 'rgba(17, 24, 39, 0.4)', // Darker, native-feeling backdrop
               backdropFilter: 'blur(4px)',
               WebkitBackdropFilter: 'blur(4px)',
               zIndex: 60,
               opacity: menuOpen ? 1 : 0,
               pointerEvents: menuOpen ? 'auto' : 'none',
-              transition: 'opacity 0.3s ease'
+              transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
           />
 
@@ -372,27 +386,48 @@ export default function Header() {
               right: 0,
               height: '100vh',
               width: '85%',
-              maxWidth: '320px',
-              backgroundColor: '#fff',
-              boxShadow: '-4px 0 25px rgba(0,0,0,0.1)',
+              maxWidth: '360px',
+              backgroundColor: '#ffffff',
+              boxShadow: '-10px 0 30px rgba(0,0,0,0.1)',
               zIndex: 70,
               transform: menuOpen ? 'translateX(0)' : 'translateX(100%)',
-              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)', // Smooth iOS-like spring
+              borderTopLeftRadius: '24px',
+              borderBottomLeftRadius: '24px',
               padding: '1.5rem',
               display: 'flex',
               flexDirection: 'column',
-              overflowY: 'auto'
+              overflowY: 'auto',
+              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <div style={{ fontWeight: '700', fontSize: '1.25rem', color: '#1f2937' }}>Menu</div>
-              <button onClick={closeMenu} style={{ background: '#f3f4f6', border: 'none', cursor: 'pointer', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <X size={20} color="#4b5563" />
+              <div style={{ fontWeight: '800', fontSize: '1.5rem', color: '#111827', letterSpacing: '-0.025em' }}>Menu</div>
+              <button
+                onClick={closeMenu}
+                style={{
+                  background: '#f3f4f6',
+                  border: 'none',
+                  cursor: 'pointer',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  WebkitTapHighlightColor: 'transparent'
+                }}
+              >
+                {/* Replaced <X /> with native SVG to avoid missing imports */}
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4b5563" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
             </div>
-            
+
             {/* Menu Items */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               {visibleNavItems.map((link) => {
                 const isActive = link.path === '/' ? pathname === '/' : pathname?.startsWith(link.path);
                 const color = isActive ? BRAND_RED : '#4b5563';
@@ -405,14 +440,15 @@ export default function Header() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
-                      padding: '12px 16px',
-                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      borderRadius: '16px',
                       backgroundColor: isActive ? '#fff1f2' : 'transparent',
                       color: color,
                       textDecoration: 'none',
                       fontSize: '1.05rem',
-                      fontWeight: isActive ? '600' : '500',
-                      transition: 'background-color 0.2s ease'
+                      fontWeight: isActive ? '700' : '600',
+                      transition: 'background-color 0.2s ease',
+                      WebkitTapHighlightColor: 'transparent'
                     }}
                   >
                     {link.icon(color, isActive)}
@@ -422,18 +458,28 @@ export default function Header() {
               })}
 
               {/* Divider */}
-              <div style={{ height: '1px', backgroundColor: '#f3f4f6', margin: '1.5rem 0' }} />
+              <div style={{ height: '1px', backgroundColor: '#e5e7eb', margin: '2rem 0 1.5rem 0' }} />
 
               {/* Auth/User Actions for Mobile */}
               {user ? (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 8px', marginBottom: '1.5rem' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: '600', color: '#4b5563', overflow: 'hidden' }}>
-                       {user.avatar ? <img src={user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : user.username?.[0]?.toUpperCase()}
+                  {/* Premium User Card inside Drawer */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '16px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '16px',
+                    marginBottom: '1.5rem',
+                    border: '1px solid #f3f4f6'
+                  }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', fontWeight: '700', color: '#4b5563', overflow: 'hidden' }}>
+                      {user.avatar ? <img src={user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : user.username?.[0]?.toUpperCase()}
                     </div>
-                    <div>
-                      <div style={{ fontWeight: '600', color: '#1f2937', fontSize: '1rem' }}>{user.username}</div>
-                      <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>{user.email}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                      <div style={{ fontWeight: '700', color: '#111827', fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.username}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</div>
                     </div>
                   </div>
 
@@ -442,15 +488,16 @@ export default function Header() {
                       href="/dashboard"
                       onClick={closeMenu}
                       style={{
-                        padding: '14px',
-                        borderRadius: '999px',
+                        padding: '16px',
+                        borderRadius: '9999px',
                         backgroundColor: '#fff1f2',
                         color: BRAND_RED,
                         textDecoration: 'none',
-                        fontWeight: '600',
+                        fontWeight: '700',
                         textAlign: 'center',
-                        border: `1.5px solid ${BRAND_RED}`,
-                        marginBottom: '0.75rem'
+                        boxShadow: 'inset 0 0 0 1.5px rgba(185, 0, 27, 0.1)',
+                        marginBottom: '0.75rem',
+                        WebkitTapHighlightColor: 'transparent'
                       }}
                     >
                       Dashboard
@@ -460,14 +507,16 @@ export default function Header() {
                       href="/onboarding"
                       onClick={closeMenu}
                       style={{
-                        padding: '14px',
-                        borderRadius: '999px',
+                        padding: '16px',
+                        borderRadius: '9999px',
                         backgroundColor: BRAND_RED,
                         color: '#fff',
                         textDecoration: 'none',
-                        fontWeight: '600',
+                        fontWeight: '700',
                         textAlign: 'center',
-                        marginBottom: '0.75rem'
+                        marginBottom: '0.75rem',
+                        boxShadow: '0 4px 12px rgba(185, 0, 27, 0.2)',
+                        WebkitTapHighlightColor: 'transparent'
                       }}
                     >
                       Sell on Tokoni
@@ -476,53 +525,57 @@ export default function Header() {
                   <button
                     onClick={() => { handleLogout(); closeMenu(); }}
                     style={{
-                      padding: '14px',
-                      borderRadius: '999px',
-                      backgroundColor: '#f3f4f6',
+                      padding: '16px',
+                      borderRadius: '9999px',
+                      backgroundColor: '#ffffff',
                       color: '#4b5563',
-                      border: 'none',
-                      fontWeight: '600',
+                      border: '1px solid #e5e7eb',
+                      fontWeight: '700',
                       cursor: 'pointer',
-                      fontSize: '1rem'
+                      fontSize: '1rem',
+                      WebkitTapHighlightColor: 'transparent'
                     }}
                   >
                     Sign Out
                   </button>
                 </>
               ) : (
-                <>
-                  <Link
-                    href="/signin"
-                    onClick={closeMenu}
-                    style={{
-                      padding: '14px',
-                      borderRadius: '999px',
-                      backgroundColor: '#f3f4f6',
-                      color: '#4b5563',
-                      textDecoration: 'none',
-                      fontWeight: '600',
-                      textAlign: 'center',
-                      marginBottom: '0.75rem'
-                    }}
-                  >
-                    Sign In
-                  </Link>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <Link
                     href="/signup"
                     onClick={closeMenu}
                     style={{
-                      padding: '14px',
-                      borderRadius: '999px',
+                      padding: '16px',
+                      borderRadius: '9999px',
                       backgroundColor: BRAND_RED,
                       color: '#fff',
                       textDecoration: 'none',
-                      fontWeight: '600',
-                      textAlign: 'center'
+                      fontWeight: '700',
+                      textAlign: 'center',
+                      boxShadow: '0 4px 12px rgba(185, 0, 27, 0.2)',
+                      WebkitTapHighlightColor: 'transparent'
                     }}
                   >
-                    Sign Up
+                    Create an Account
                   </Link>
-                </>
+                  <Link
+                    href="/signin"
+                    onClick={closeMenu}
+                    style={{
+                      padding: '16px',
+                      borderRadius: '9999px',
+                      backgroundColor: '#ffffff',
+                      color: '#374151',
+                      textDecoration: 'none',
+                      fontWeight: '700',
+                      textAlign: 'center',
+                      border: '1px solid #e5e7eb',
+                      WebkitTapHighlightColor: 'transparent'
+                    }}
+                  >
+                    Sign In
+                  </Link>
+                </div>
               )}
             </div>
           </div>

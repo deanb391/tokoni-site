@@ -155,7 +155,7 @@ export default function CreateNewPostScreen() {
                                         <div style={{ position: 'absolute', top: '20px', bottom: '20px', width: '40px', backgroundColor: '#9CA3AF', borderRadius: '4px', zIndex: 1 }}></div>
                                     </div>
                                     <h4 style={{ fontSize: '13px', fontWeight: '500', color: '#111', margin: '0 0 2px 0' }}>Classic Chronograph</h4>
-                                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#B9001B' }}>$129.00</span>
+                                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#B9001B' }}>₦129.00</span>
                                 </div>
 
                                 {/* Product 2 */}
@@ -164,10 +164,10 @@ export default function CreateNewPostScreen() {
                                         {/* Simulated Headphones graphic */}
                                         <div style={{ width: '100px', height: '120px', border: '20px solid #111', borderRadius: '60px 60px 20px 20px', borderBottom: 'none', position: 'absolute', top: '40px' }}></div>
                                         <div style={{ width: '40px', height: '60px', backgroundColor: '#E5E7EB', borderRadius: '15px', position: 'absolute', left: '60px', bottom: '50px' }}></div>
-                                        <div style={{ width: '40px', height: '60px', backgroundColor: '#E5E7EB', borderRadius: '15px', position: 'absolute', right: '60px', bottom: '50px' }}></div>
+                                        <div style={{ width: '40px', height: '60px', backgroundColor: '#E5E7EB', borderRadius: '15px', position: 'absolute', right: '#60px', bottom: '50px' }}></div>
                                     </div>
                                     <h4 style={{ fontSize: '13px', fontWeight: '500', color: '#111', margin: '0 0 2px 0' }}>Studio Pro ANC</h4>
-                                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#B9001B' }}>$299.00</span>
+                                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#B9001B' }}>₦299.00</span>
                                 </div>
 
                             </div>

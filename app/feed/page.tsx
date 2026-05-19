@@ -67,7 +67,7 @@ export default function FeedScreen() {
             time: '2 hours ago',
             avatarBg: '#E0F2FE',
             imageBg: '#2A3036', // Dark building background
-            priceOverlay: '$249',
+            priceOverlay: '₦249',
             likes: '1,204',
             caption: 'The new essential trench. Uncompromising structure meets fluid movement. Available now in the shop. #minimalist #fashion #tokoni',
             // Inline placeholder representing the red coat model

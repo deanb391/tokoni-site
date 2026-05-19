@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { editVendor } from '@/lib/api/vendors';
 import { uploadToServer } from '@/lib/upload';
+import { getVendorProducts } from '@/lib/api/products';
+import EditProductModal from '@/components/EditProductModal';
 
 // --- Inline SVG Icons ---
 const SearchIcon = ({ color = "#666" }) => (
@@ -122,6 +124,12 @@ export default function VendorDashboardScreen() {
     const [mounted, setMounted] = useState(false);
     const [activeTab, setActiveTab] = useState('Products');
 
+    // Products State
+    const [products, setProducts] = useState<any[]>([]);
+    const [productsLoading, setProductsLoading] = useState(true);
+    const [selectedProductToEdit, setSelectedProductToEdit] = useState<any | null>(null);
+    const [isEditProductModalOpen, setIsEditProductModalOpen] = useState(false);
+
     // Edit Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [businessName, setBusinessName] = useState('');
@@ -152,6 +160,25 @@ export default function VendorDashboardScreen() {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Load actual vendor products
+    useEffect(() => {
+        const loadProducts = async () => {
+            if (!vendor?.$id) return;
+            setProductsLoading(true);
+            try {
+                const list = await getVendorProducts(vendor.$id);
+                setProducts(list);
+            } catch (err) {
+                console.error("Failed to load vendor products:", err);
+            } finally {
+                setProductsLoading(false);
+            }
+        };
+        if (vendor?.$id) {
+            loadProducts();
+        }
+    }, [vendor]);
 
     // Redirect unauthenticated user
     useEffect(() => {
@@ -310,58 +337,7 @@ export default function VendorDashboardScreen() {
     const mobile = mounted ? isMobile : false;
     const tabs = ['Products', 'Orders', 'Analytics', 'Followers', 'Settings'];
 
-    // Mock products customized to the vendor's domain
-    const products = [
-        {
-            id: 1,
-            name: 'Essential Brand Tee',
-            price: '$35.00',
-            sold: 124,
-            badge: 'In Stock',
-            badgeColor: '#B9001B',
-            badgeBg: '#FFF0F2',
-            imgBg: '#EAEAEA',
-            visualPlaceholder: (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                    <div style={{ width: '120px', height: '140px', backgroundColor: '#FFFFFF', borderRadius: '12px 12px 4px 4px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', position: 'relative' }}>
-                        <div style={{ width: '40px', height: '20px', borderBottom: '2px solid #EAEAEA', borderRadius: '50%', position: 'absolute', top: '-10px', left: '40px', backgroundColor: '#FFF' }}></div>
-                    </div>
-                </div>
-            )
-        },
-        {
-            id: 2,
-            name: 'Signature Hoodie',
-            price: '$85.00',
-            sold: 56,
-            badge: 'Low Stock (3)',
-            badgeColor: '#111111',
-            badgeBg: '#F3F4F6',
-            imgBg: '#D1D5DB',
-            visualPlaceholder: (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                    <div style={{ width: '130px', height: '150px', backgroundColor: '#374151', borderRadius: '20px 20px 8px 8px', boxShadow: '0 15px 30px rgba(0,0,0,0.15)', position: 'relative' }}>
-                        <div style={{ width: '60px', height: '40px', backgroundColor: '#4B5563', borderRadius: '10px', position: 'absolute', top: '10px', left: '35px' }}></div>
-                    </div>
-                </div>
-            )
-        },
-        {
-            id: 3,
-            name: 'Classic Jeans',
-            price: '$120.00',
-            sold: 210,
-            badge: 'Out of Stock',
-            badgeColor: '#B9001B',
-            badgeBg: '#FFF0F2',
-            imgBg: '#E5E5E5',
-            visualPlaceholder: (
-                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', height: '100%', paddingBottom: '30px' }}>
-                    <div style={{ width: '140px', height: '60px', backgroundColor: '#1E3A8A', borderRadius: '6px', boxShadow: '0 10px 20px rgba(0,0,0,0.1)', borderTop: '2px dashed #3B82F6' }}></div>
-                </div>
-            )
-        }
-    ];
+    // Products and mock states mapped dynamically
 
     return (
         <div style={{ backgroundColor: '#F9FAFB', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
@@ -442,7 +418,7 @@ export default function VendorDashboardScreen() {
                                         <span style={{ fontSize: '13px', color: '#666' }}>Following</span>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontSize: '16px', fontWeight: '700', color: '#111' }}>3</span>
+                                        <span style={{ fontSize: '16px', fontWeight: '700', color: '#111' }}>{productsLoading ? '...' : products.length}</span>
                                         <span style={{ fontSize: '13px', color: '#666' }}>Products Listed</span>
                                     </div>
                                 </div>
@@ -509,39 +485,88 @@ export default function VendorDashboardScreen() {
                         </div>
 
                         {/* Product Grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem' }}>
+                        {productsLoading ? (
+                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem', width: '100%' }}>
+                                <div style={{ width: '30px', height: '30px', border: '3px solid #E5E7EB', borderTop: '3px solid #B9001B', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                            </div>
+                        ) : products.length === 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EDEDED', textAlign: 'center', width: '100%', boxSizing: 'border-box' }}>
+                                <span style={{ fontSize: '48px', marginBottom: '1rem' }}>📦</span>
+                                <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#111', margin: '0 0 0.5rem 0' }}>No Products Listed</h3>
+                                <p style={{ fontSize: '14.5px', color: '#666', maxWidth: '380px', margin: '0 0 1.5rem 0', lineHeight: '1.5' }}>
+                                    You haven't listed any products yet. Click the "Add Product" button to list your first item!
+                                </p>
+                                <button
+                                    onClick={() => router.push('/dashboard/product/add')}
+                                    style={{ backgroundColor: '#B9001B', color: '#FFFFFF', border: 'none', borderRadius: '25px', padding: '0.65rem 1.75rem', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.2s' }}
+                                >
+                                    Add Your First Product
+                                </button>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem', width: '100%' }}>
+                                {products.map((prod) => {
+                                    const isAvailable = prod.available;
+                                    const badgeText = !isAvailable 
+                                        ? "Draft" 
+                                        : prod.stock > 0 
+                                            ? `In Stock (${prod.stock})` 
+                                            : "Out of Stock";
+                                    const badgeColor = !isAvailable 
+                                        ? "#4b5563" 
+                                        : prod.stock > 0 
+                                            ? "#B9001B" 
+                                            : "#ef4444";
+                                    const badgeBg = !isAvailable 
+                                        ? "#f3f4f6" 
+                                        : prod.stock > 0 
+                                            ? "#FFF0F2" 
+                                            : "#fee2e2";
 
-                            {products.map((prod) => (
-                                <div key={prod.id} style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #EDEDED', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s, box-shadow 0.2s' }}>
-
-                                    {/* Image Area */}
-                                    <div style={{ width: '100%', height: '300px', backgroundColor: prod.imgBg, position: 'relative' }}>
-                                        {prod.visualPlaceholder}
-
-                                        {/* Badge */}
-                                        <div style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: prod.badgeBg, color: prod.badgeColor, padding: '4px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
-                                            {prod.badge}
+                                    return (
+                                        <div key={prod.$id} style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #EDEDED', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer' }}>
+                                            <div onClick={() => router.push(`/product/${prod.$id}`)} style={{ width: '100%', height: '300px', backgroundColor: '#F3F4F6', position: 'relative', overflow: 'hidden' }}>
+                                                {prod.images && prod.images.length > 0 ? (
+                                                    <img src={prod.images[0]} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <ImageIcon />
+                                                    </div>
+                                                )}
+                                                <div style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: badgeBg, color: badgeColor, padding: '4px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
+                                                    {badgeText}
+                                                </div>
+                                            </div>
+                                            <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                                <h3 onClick={() => router.push(`/product/${prod.$id}`)} style={{ fontSize: '16px', fontWeight: '600', color: '#111', margin: '0 0 0.5rem 0' }}>{prod.name}</h3>
+                                                <span onClick={() => router.push(`/product/${prod.$id}`)} style={{ fontSize: '15px', color: '#444', fontWeight: '600', marginBottom: '1rem' }}>
+                                                    ₦{prod.price.toFixed(2)}
+                                                    {prod.discountPrice && (
+                                                        <span style={{ textDecoration: 'line-through', color: '#888', fontSize: '13px', marginLeft: '8px', fontWeight: '400' }}>
+                                                            ₦{prod.discountPrice.toFixed(2)}
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span style={{ fontSize: '13px', color: '#666' }}>Stock: {prod.stock}</span>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedProductToEdit(prod);
+                                                            setIsEditProductModalOpen(true);
+                                                        }}
+                                                        style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', color: '#B9001B', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+                                                    >
+                                                        <EditPencilIcon />
+                                                        Edit
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-
-                                    {/* Details Area */}
-                                    <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                                        <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#111', margin: '0 0 0.5rem 0' }}>{prod.name}</h3>
-                                        <span style={{ fontSize: '15px', color: '#444', fontWeight: '500', marginBottom: '1rem' }}>{prod.price}</span>
-
-                                        <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '13px', color: '#666' }}>Sold: {prod.sold}</span>
-                                            <button style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', color: '#B9001B', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}>
-                                                <EditPencilIcon />
-                                                Edit
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                </div>
-                            ))}
-
-                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </>
                 )}
 
@@ -559,6 +584,7 @@ export default function VendorDashboardScreen() {
 
             {/* ================= FLOATING ACTION BUTTON ================= */}
             <button
+                onClick={() => router.push('/dashboard/product/add')}
                 style={{
                     position: 'fixed',
                     bottom: '2rem',
@@ -873,6 +899,21 @@ export default function VendorDashboardScreen() {
                     </div>
                 </div>
             )}
+
+            <EditProductModal
+                product={selectedProductToEdit}
+                isOpen={isEditProductModalOpen}
+                onClose={() => {
+                    setIsEditProductModalOpen(false);
+                    setSelectedProductToEdit(null);
+                }}
+                onSuccess={(updatedProd) => {
+                    setProducts((prev) => prev.map((p) => p.$id === updatedProd.$id ? updatedProd : p));
+                }}
+                onDeleteSuccess={() => {
+                    setProducts((prev) => prev.filter((p) => p.$id !== selectedProductToEdit?.$id));
+                }}
+            />
         </div>
     );
 }

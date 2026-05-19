@@ -228,7 +228,7 @@ export default function MessagesScreen() {
                                 </div>
                                 <div>
                                     <div style={{ fontSize: '14px', fontWeight: '600', color: '#111', marginBottom: '4px' }}>Minimalist Matte Vase</div>
-                                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#B9001B' }}>$85.00</div>
+                                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#B9001B' }}>₦85.00</div>
                                 </div>
                             </div>
                         </div>
