@@ -707,7 +707,7 @@ export default function MenuScreen() {
                         >
                             <BackIcon />
                         </button>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: 0 }}>Account Details</h2>
+                        <h2 style={{ fontSize: '1.0rem', fontWeight: '700', color: '#111827', margin: 0 }}>Account Details</h2>
                     </div>
 
                     {/* Profile details summary card */}
@@ -794,8 +794,8 @@ export default function MenuScreen() {
                                     <LockIcon />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontSize: '15px', fontWeight: '600', color: '#111827' }}>Change Password</span>
-                                    <span style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '2px' }}>Keep your account secure</span>
+                                    <span style={{ fontSize: '12px', fontWeight: '600', color: '#111827' }}>Change Password</span>
+                                    <span style={{ fontSize: '0.65rem', color: '#6b7280', marginTop: '2px' }}>Keep your account secure</span>
                                 </div>
                             </div>
                             <ChevronRightIcon />
@@ -820,8 +820,8 @@ export default function MenuScreen() {
                                     <TrashIcon color={BRAND_RED} />
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontSize: '15px', fontWeight: '600', color: BRAND_RED }}>Deactivate Account</span>
-                                    <span style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '2px' }}>Temporarily disable your profile</span>
+                                    <span style={{ fontSize: '12px', fontWeight: '600', color: BRAND_RED }}>Deactivate Account</span>
+                                    <span style={{ fontSize: '0.65rem', color: '#ef4444', marginTop: '2px' }}>Temporarily disable your profile</span>
                                 </div>
                             </div>
                             <ChevronRightIcon color={BRAND_RED} />
@@ -857,7 +857,7 @@ export default function MenuScreen() {
 
                     <form onSubmit={handleChangePasswordSubmit} style={{
                         backgroundColor: '#ffffff',
-                        borderRadius: '24px',
+                        borderRadius: '25px',
                         padding: '2.5rem 2rem',
                         boxShadow: '0 4px 25px rgba(0, 0, 0, 0.03)',
                         border: '1px solid #f3f4f6',
@@ -976,7 +976,7 @@ export default function MenuScreen() {
                         >
                             <BackIcon />
                         </button>
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: 0 }}>Settings & Privacy</h2>
+                        <h2 style={{ fontSize: '1.0rem', fontWeight: '700', color: '#111827', margin: 0 }}>Settings & Privacy</h2>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -986,8 +986,8 @@ export default function MenuScreen() {
 
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Push Notifications</span>
-                                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Receive alerts about orders and product updates</span>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>Push Notifications</span>
+                                    <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>Receive alerts about orders and product updates</span>
                                 </div>
                                 <div style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
                                     <input
@@ -1022,8 +1022,8 @@ export default function MenuScreen() {
 
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Email Notifications</span>
-                                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Weekly summaries and newsletter updates</span>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>Email Notifications</span>
+                                    <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>Weekly summaries and newsletter updates</span>
                                 </div>
                                 <div style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
                                     <input
@@ -1056,8 +1056,8 @@ export default function MenuScreen() {
                             {/* Currency Preference */}
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Currency</span>
-                                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Display prices in your preferred currency</span>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>Currency</span>
+                                    <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>Display prices in your preferred currency</span>
                                 </div>
                                 <select
                                     value={currency}
@@ -1084,8 +1084,8 @@ export default function MenuScreen() {
                             {/* Dark Mode Preference (Simulated) */}
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                    <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Dark Mode</span>
-                                    <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>Enjoy dark visual aesthetics (Simulated)</span>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>Dark Mode</span>
+                                    <span style={{ fontSize: '0.65rem', color: '#6b7280' }}>Enjoy dark visual aesthetics (Simulated)</span>
                                 </div>
                                 <div style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px' }}>
                                     <input
@@ -1119,7 +1119,7 @@ export default function MenuScreen() {
                                 onClick={() => router.push('/privacy')}
                                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0', cursor: 'pointer' }}
                             >
-                                <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Privacy Policy</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>Privacy Policy</span>
                                 <ChevronRightIcon />
                             </div>
 
@@ -1127,7 +1127,7 @@ export default function MenuScreen() {
                                 onClick={() => router.push('/terms')}
                                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0', cursor: 'pointer' }}
                             >
-                                <span style={{ fontSize: '0.95rem', fontWeight: '600', color: '#374151' }}>Terms of Service</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#374151' }}>Terms of Service</span>
                                 <ChevronRightIcon />
                             </div>
                         </div>
