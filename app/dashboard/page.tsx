@@ -292,7 +292,7 @@ export default function VendorDashboardScreen() {
 
     if (loading || (user && vendorLoading && !vendor)) {
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#F9FAFB' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', fontFamily: 'var(--font-body), sans-serif', backgroundColor: '#F9FAFB' }}>
                 <div style={{ width: '40px', height: '40px', border: '3px solid #E5E7EB', borderTop: '3px solid #B9001B', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '1.5rem' }}></div>
                 <p style={{ color: '#555', fontSize: '15px', fontWeight: '500' }}>Loading your premium experience...</p>
                 <style jsx global>{`
@@ -311,7 +311,7 @@ export default function VendorDashboardScreen() {
     // Authenticated but does not have a vendor account yet
     if (!vendor) {
         return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', backgroundColor: '#F9FAFB', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', padding: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', backgroundColor: '#F9FAFB', fontFamily: 'var(--font-body), sans-serif', padding: '2rem' }}>
                 <div style={{ maxWidth: '480px', width: '100%', backgroundColor: '#FFFFFF', borderRadius: '24px', padding: '3rem 2.5rem', boxShadow: '0 10px 30px rgba(0,0,0,0.03)', border: '1px solid #EDEDED', textAlign: 'center' }}>
                     <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#FFF0F2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#B9001B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -340,7 +340,7 @@ export default function VendorDashboardScreen() {
     // Products and mock states mapped dynamically
 
     return (
-        <div style={{ backgroundColor: '#F9FAFB', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+        <div style={{ backgroundColor: '#F9FAFB', minHeight: '100vh', fontFamily: 'var(--font-body), sans-serif' }}>
 
             {/* ================= HERO SECTION ================= */}
             <section style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #EDEDED' }}>

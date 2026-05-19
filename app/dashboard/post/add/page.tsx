@@ -79,7 +79,7 @@ export default function CreateNewPostScreen() {
     ];
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#FAFAFA', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#FAFAFA', fontFamily: 'var(--font-body), sans-serif' }}>
 
 
 

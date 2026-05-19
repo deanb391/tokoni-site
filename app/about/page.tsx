@@ -75,7 +75,7 @@ export default function AboutScreen() {
     const mobile = mounted ? isMobile : false;
 
     return (
-        <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', overflowX: 'hidden' }}>
+        <div style={{ backgroundColor: '#FFFFFF', minHeight: '100vh', fontFamily: 'var(--font-body), sans-serif', overflowX: 'hidden' }}>
 
 
             {/* ================= HERO SECTION ================= */}

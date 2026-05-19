@@ -142,7 +142,7 @@ export default function HelpCenterScreen() {
     };
 
     return (
-        <div style={{ backgroundColor: '#FAFAFA', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+        <div style={{ backgroundColor: '#FAFAFA', minHeight: '100vh', fontFamily: 'var(--font-body), sans-serif' }}>
 
 
 

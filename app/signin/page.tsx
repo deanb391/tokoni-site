@@ -63,7 +63,7 @@ export default function LoginScreen() {
                 justifyContent: "center",
                 padding: "2rem 1.5rem",
                 boxSizing: "border-box",
-                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+                fontFamily: 'var(--font-body), sans-serif'
             }}
         >
             {/* Top Logo Brand Asset */}

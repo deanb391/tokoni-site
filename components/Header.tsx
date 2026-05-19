@@ -135,7 +135,7 @@ export default function Header() {
           borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
           boxSizing: 'border-box',
           boxShadow: mobile ? 'none' : '0 4px 30px rgba(0, 0, 0, 0.03)', // Softer, wider shadow
-          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+          fontFamily: 'var(--font-body), sans-serif'
         }}
       >
         {/* Logo */}
@@ -432,11 +432,11 @@ export default function Header() {
               display: 'flex',
               flexDirection: 'column',
               overflowY: 'auto',
-              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+              fontFamily: 'var(--font-body), sans-serif'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <div style={{ fontWeight: '800', fontSize: '1.0rem', color: '#111827', letterSpacing: '-0.025em' }}>Menu</div>
+              <div style={{ fontWeight: '800', fontSize: '1.0rem', color: '#111827', letterSpacing: '-0.025em', fontFamily: 'var(--font-heading), sans-serif' }}>Menu</div>
               <button
                 onClick={closeMenu}
                 style={{

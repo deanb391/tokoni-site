@@ -302,7 +302,7 @@ export default function ProductDetailScreen() {
 
     if (loading || !product) {
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#F9FAFB', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#F9FAFB', fontFamily: 'var(--font-body), sans-serif' }}>
                 <div style={{ width: '40px', height: '40px', border: '3px solid #E5E7EB', borderTop: '3px solid #B9001B', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '1.25rem' }}></div>
                 <p style={{ color: '#666', fontSize: '15px', fontWeight: '500' }}>Fetching product details...</p>
                 <style jsx global>{`
@@ -319,7 +319,7 @@ export default function ProductDetailScreen() {
     const originalPrice = product.discountPrice ? product.price : null;
 
     return (
-        <div style={{ backgroundColor: '#F9FAFB', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+        <div style={{ backgroundColor: '#F9FAFB', minHeight: '100vh', fontFamily: 'var(--font-body), sans-serif' }}>
 
             {/* ================= HEADER ================= */}
             <header

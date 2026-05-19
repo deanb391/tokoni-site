@@ -281,7 +281,7 @@ export default function MenuScreen() {
     // Full Page Loader
     if (loading || !user) {
         return (
-            <main style={{ paddingBottom: '4rem', fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+            <main style={{ paddingBottom: '4rem', fontFamily: 'var(--font-body), sans-serif' }}>
                 <style>{`
                     @keyframes skeleton-pulse {
                         0%, 100% { background-color: #f3f4f6; }
@@ -337,7 +337,7 @@ export default function MenuScreen() {
     }
 
     return (
-        <main style={{ paddingBottom: '4rem', fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', minHeight: '80vh' }}>
+        <main style={{ paddingBottom: '4rem', fontFamily: 'var(--font-body), sans-serif', minHeight: '80vh' }}>
             <style>{`
                 @keyframes fadeIn {
                     from { opacity: 0; transform: translateY(8px); }

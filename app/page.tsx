@@ -105,7 +105,7 @@ export default function ProductExploreScreen() {
         boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        fontFamily: 'var(--font-body), sans-serif'
       }}
     >
       <div style={{ maxWidth: '1280px', margin: '0 auto', width: '100%' }}>

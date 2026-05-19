@@ -82,6 +82,14 @@ export async function updateUser({
 
 export async function getCurrentUser() {
   try {
+    // Check if client-side and session fallback token exists to avoid noisy 401 console errors
+    if (typeof window !== "undefined") {
+      const fallback = localStorage.getItem("cookieFallback");
+      if (!fallback || fallback === "[]") {
+        return null;
+      }
+    }
+
     // 1. Check session
     const session = await account.getSession("current");
     if (!session) return null;

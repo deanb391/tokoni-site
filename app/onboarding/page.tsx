@@ -324,7 +324,7 @@ export default function VendorOnboardingFlow() {
     }
 
     return (
-        <div style={{ backgroundColor: '#FAFAFA', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ backgroundColor: '#FAFAFA', minHeight: '100vh', fontFamily: 'var(--font-body), sans-serif', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
             {/* ================= GLOBAL HEADER ================= */}
             <header

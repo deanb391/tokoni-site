@@ -270,7 +270,7 @@ export default function MessagesScreen() {
     );
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: mobile ? 'calc(100vh - 116px)' : 'calc(100vh - 73px)', backgroundColor: '#FFFFFF', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: mobile ? 'calc(100vh - 116px)' : 'calc(100vh - 73px)', backgroundColor: '#FFFFFF', fontFamily: 'var(--font-body), sans-serif' }}>
             {/* Main Content Area */}
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
