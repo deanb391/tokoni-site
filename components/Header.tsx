@@ -17,7 +17,9 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, vendor, refreshUser } = useUser();
+  const { user, vendor, refreshUser, loading, vendorLoading } = useUser();
+
+  const isAuthLoading = !mounted || loading || vendorLoading;
 
   useEffect(() => {
     setMounted(true);
@@ -104,6 +106,19 @@ export default function Header() {
 
   return (
     <>
+      <style>{`
+        @keyframes skeleton-pulse {
+          0%, 100% {
+            background-color: #f3f4f6;
+          }
+          50% {
+            background-color: #e5e7eb;
+          }
+        }
+        .skeleton-item {
+          animation: skeleton-pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+      `}</style>
       <header
         style={{
           position: 'sticky',
@@ -188,7 +203,26 @@ export default function Header() {
         {/* Actions */}
         {!mobile ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            {user ? (
+            {isAuthLoading ? (
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <div
+                  className="skeleton-item"
+                  style={{
+                    width: '100px',
+                    height: '38px',
+                    borderRadius: '9999px'
+                  }}
+                />
+                <div
+                  className="skeleton-item"
+                  style={{
+                    width: '75px',
+                    height: '38px',
+                    borderRadius: '9999px'
+                  }}
+                />
+              </div>
+            ) : user ? (
               <>
                 {user?.isVendor || vendor ? (
                   <Link
@@ -385,7 +419,7 @@ export default function Header() {
               top: 0,
               right: 0,
               height: '100vh',
-              width: '85%',
+              width: '65%',
               maxWidth: '360px',
               backgroundColor: '#ffffff',
               boxShadow: '-10px 0 30px rgba(0,0,0,0.1)',
@@ -402,7 +436,7 @@ export default function Header() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <div style={{ fontWeight: '800', fontSize: '1.5rem', color: '#111827', letterSpacing: '-0.025em' }}>Menu</div>
+              <div style={{ fontWeight: '800', fontSize: '1.0rem', color: '#111827', letterSpacing: '-0.025em' }}>Menu</div>
               <button
                 onClick={closeMenu}
                 style={{
@@ -445,7 +479,7 @@ export default function Header() {
                       backgroundColor: isActive ? '#fff1f2' : 'transparent',
                       color: color,
                       textDecoration: 'none',
-                      fontSize: '1.05rem',
+                      fontSize: '0.80rem',
                       fontWeight: isActive ? '700' : '600',
                       transition: 'background-color 0.2s ease',
                       WebkitTapHighlightColor: 'transparent'
@@ -461,7 +495,50 @@ export default function Header() {
               <div style={{ height: '1px', backgroundColor: '#e5e7eb', margin: '2rem 0 1.5rem 0' }} />
 
               {/* Auth/User Actions for Mobile */}
-              {user ? (
+              {isAuthLoading ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+                  {/* Premium User Card Skeleton inside Drawer */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '16px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '16px',
+                    border: '1px solid #f3f4f6'
+                  }}>
+                    <div
+                      className="skeleton-item"
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%'
+                      }}
+                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                      <div className="skeleton-item" style={{ width: '60%', height: '14px', borderRadius: '4px' }} />
+                      <div className="skeleton-item" style={{ width: '40%', height: '10px', borderRadius: '4px' }} />
+                    </div>
+                  </div>
+
+                  <div
+                    className="skeleton-item"
+                    style={{
+                      height: '54px',
+                      borderRadius: '9999px',
+                      width: '100%'
+                    }}
+                  />
+                  <div
+                    className="skeleton-item"
+                    style={{
+                      height: '54px',
+                      borderRadius: '9999px',
+                      width: '100%'
+                    }}
+                  />
+                </div>
+              ) : user ? (
                 <>
                   {/* Premium User Card inside Drawer */}
                   <div style={{
@@ -478,8 +555,8 @@ export default function Header() {
                       {user.avatar ? <img src={user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : user.username?.[0]?.toUpperCase()}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                      <div style={{ fontWeight: '700', color: '#111827', fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.username}</div>
-                      <div style={{ fontSize: '0.85rem', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</div>
+                      <div style={{ fontWeight: '700', color: '#111827', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.username}</div>
+                      <div style={{ fontSize: '0.65rem', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</div>
                     </div>
                   </div>
 
@@ -488,7 +565,7 @@ export default function Header() {
                       href="/dashboard"
                       onClick={closeMenu}
                       style={{
-                        padding: '16px',
+                        padding: '12px',
                         borderRadius: '9999px',
                         backgroundColor: '#fff1f2',
                         color: BRAND_RED,
@@ -497,7 +574,8 @@ export default function Header() {
                         textAlign: 'center',
                         boxShadow: 'inset 0 0 0 1.5px rgba(185, 0, 27, 0.1)',
                         marginBottom: '0.75rem',
-                        WebkitTapHighlightColor: 'transparent'
+                        WebkitTapHighlightColor: 'transparent',
+                        fontSize: '0.80rem',
                       }}
                     >
                       Dashboard
@@ -507,7 +585,7 @@ export default function Header() {
                       href="/onboarding"
                       onClick={closeMenu}
                       style={{
-                        padding: '16px',
+                        padding: '12px',
                         borderRadius: '9999px',
                         backgroundColor: BRAND_RED,
                         color: '#fff',
@@ -516,7 +594,8 @@ export default function Header() {
                         textAlign: 'center',
                         marginBottom: '0.75rem',
                         boxShadow: '0 4px 12px rgba(185, 0, 27, 0.2)',
-                        WebkitTapHighlightColor: 'transparent'
+                        WebkitTapHighlightColor: 'transparent',
+                        fontSize: '0.80rem',
                       }}
                     >
                       Sell on Tokoni
@@ -525,15 +604,15 @@ export default function Header() {
                   <button
                     onClick={() => { handleLogout(); closeMenu(); }}
                     style={{
-                      padding: '16px',
+                      padding: '12px',
                       borderRadius: '9999px',
                       backgroundColor: '#ffffff',
                       color: '#4b5563',
                       border: '1px solid #e5e7eb',
                       fontWeight: '700',
                       cursor: 'pointer',
-                      fontSize: '1rem',
-                      WebkitTapHighlightColor: 'transparent'
+                      WebkitTapHighlightColor: 'transparent',
+                      fontSize: '0.80rem',
                     }}
                   >
                     Sign Out
@@ -545,7 +624,7 @@ export default function Header() {
                     href="/signup"
                     onClick={closeMenu}
                     style={{
-                      padding: '16px',
+                      padding: '12px',
                       borderRadius: '9999px',
                       backgroundColor: BRAND_RED,
                       color: '#fff',
@@ -553,7 +632,8 @@ export default function Header() {
                       fontWeight: '700',
                       textAlign: 'center',
                       boxShadow: '0 4px 12px rgba(185, 0, 27, 0.2)',
-                      WebkitTapHighlightColor: 'transparent'
+                      WebkitTapHighlightColor: 'transparent',
+                      fontSize: '0.80rem',
                     }}
                   >
                     Create an Account
@@ -562,7 +642,7 @@ export default function Header() {
                     href="/signin"
                     onClick={closeMenu}
                     style={{
-                      padding: '16px',
+                      padding: '12px',
                       borderRadius: '9999px',
                       backgroundColor: '#ffffff',
                       color: '#374151',
@@ -570,7 +650,8 @@ export default function Header() {
                       fontWeight: '700',
                       textAlign: 'center',
                       border: '1px solid #e5e7eb',
-                      WebkitTapHighlightColor: 'transparent'
+                      WebkitTapHighlightColor: 'transparent',
+                      fontSize: '0.80rem',
                     }}
                   >
                     Sign In

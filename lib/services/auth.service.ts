@@ -63,14 +63,32 @@ export async function updateUser({
   userId,
   isVendor,
   lastTime,
+  username,
+  avatar,
+  isDeactivated,
 }: {
   userId: string;
   isVendor?: boolean;
   lastTime?: Date;
+  username?: string;
+  avatar?: string;
+  isDeactivated?: boolean;
 }) {
   const payload: Record<string, any> = {};
   if (isVendor !== undefined) payload.isVendor = isVendor;
   if (lastTime !== undefined) payload.lastTime = lastTime;
+  if (username !== undefined) payload.username = username;
+  if (avatar !== undefined) payload.avatar = avatar;
+  if (isDeactivated !== undefined) payload.isDeactivated = isDeactivated;
+
+  // If username is updated, also update Appwrite Auth display name
+  if (username) {
+    try {
+      await account.updateName(username);
+    } catch (err) {
+      console.warn("Failed to update name in Appwrite auth:", err);
+    }
+  }
 
   return databases.updateDocument(
     DATABASE_ID,
@@ -78,6 +96,10 @@ export async function updateUser({
     userId,
     payload
   );
+}
+
+export async function updateAccountPassword(password: string, oldPassword?: string) {
+  return await account.updatePassword(password, oldPassword);
 }
 
 export async function getCurrentUser() {
