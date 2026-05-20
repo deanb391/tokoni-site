@@ -97,7 +97,13 @@ export default function ExpandedPostContainer() {
       if (!video) return;
       const idx = parseInt(idxStr, 10);
       if (idx === expandedPostIndex) {
-        video.play().catch(() => { });
+        video.play().catch((err) => {
+          console.warn("Autoplay prevented, attempting muted play:", err);
+          video.muted = true;
+          video.play().catch((err2) => {
+            console.error("Muted video playback failed:", err2);
+          });
+        });
       } else {
         video.pause();
         try {
@@ -145,13 +151,32 @@ export default function ExpandedPostContainer() {
 
   // Scroll active item into view when active index changes
   useEffect(() => {
-    if (expandedPostIndex !== null && itemRefs.current[expandedPostIndex]) {
-      itemRefs.current[expandedPostIndex]?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
+    if (expandedPostIndex !== null && itemRefs.current[expandedPostIndex] && containerRef.current) {
+      const container = containerRef.current;
+      const height = container.clientHeight;
+      if (height > 0) {
+        const currentIdx = Math.round(container.scrollTop / height);
+        if (currentIdx !== expandedPostIndex) {
+          itemRefs.current[expandedPostIndex]?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      }
     }
   }, [expandedPostIndex]);
+
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    const container = containerRef.current;
+    const scrollPos = container.scrollTop;
+    const height = container.clientHeight;
+    if (height === 0) return;
+    const newIndex = Math.round(scrollPos / height);
+    if (newIndex >= 0 && newIndex < posts.length && newIndex !== expandedPostIndex) {
+      setExpandedPostIndex(newIndex);
+    }
+  };
 
   if (expandedPostIndex === null) return null;
 
@@ -211,6 +236,7 @@ export default function ExpandedPostContainer() {
       {/* Expanded Reels Feed */}
       <div
         ref={containerRef}
+        onScroll={handleScroll}
         className="w-full h-full md:max-w-2xl flex flex-col items-center justify-start overflow-y-scroll snap-y snap-mandatory scroll-smooth"
         style={{ scrollbarWidth: "none" }}
       >
@@ -235,8 +261,12 @@ export default function ExpandedPostContainer() {
                       autoPlay={idx === expandedPostIndex}
                       loop
                       playsInline
+                      muted
                       onClick={(e) => {
                         const v = e.currentTarget;
+                        if (v.muted) {
+                          v.muted = false;
+                        }
                         if (v.paused) {
                           v.play().catch(() => { });
                           showFeedback(post.$id, "play");

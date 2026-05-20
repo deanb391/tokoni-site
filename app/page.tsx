@@ -182,7 +182,7 @@ export default function HomeFeedScreen() {
                             /* Responsive mosaic layout grid */
                             <div style={{
                                 display: 'grid',
-                                gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+                                gridTemplateColumns: mobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
                                 gap: mobile ? '0.75rem' : '1.5rem',
                                 alignItems: 'start',
                                 marginBottom: '4rem'
