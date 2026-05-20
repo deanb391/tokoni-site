@@ -3,6 +3,7 @@ import { Outfit, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import MainLayout from "@/components/MainLayout";
 import { UserProvider } from "@/context/UserContext";
+import { ChatProvider } from "@/context/ChatContext";
 import { FeedProvider } from "@/context/FeedContext";
 import { HomeFeedProvider } from "@/context/HomeFeedContext";
 import { ProductsProvider } from "@/context/ProductsContext";
@@ -37,14 +38,16 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col w-full overflow-x-hidden">
         <UserProvider>
-          <FeedProvider>
-            <HomeFeedProvider>
-              <ProductsProvider>
-                <MainLayout>{children}</MainLayout>
-                <ExpandedPostContainer />
-              </ProductsProvider>
-            </HomeFeedProvider>
-          </FeedProvider>
+          <ChatProvider>
+            <FeedProvider>
+              <HomeFeedProvider>
+                <ProductsProvider>
+                  <MainLayout>{children}</MainLayout>
+                  <ExpandedPostContainer />
+                </ProductsProvider>
+              </HomeFeedProvider>
+            </FeedProvider>
+          </ChatProvider>
         </UserProvider>
       </body>
     </html>

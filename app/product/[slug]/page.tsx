@@ -5,6 +5,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { getProductById, toggleLikeProduct } from '@/lib/api/products';
+import { useChat } from '@/context/ChatContext';
+import { getVendorById } from '@/lib/api/vendors';
 import { fetchReviews, createReview, calculateProductAverageRating } from '@/lib/api/reviews';
 import EditProductModal from '@/components/EditProductModal';
 import ReviewModal from '@/components/ReviewModal';
@@ -126,14 +128,47 @@ export default function ProductDetailScreen() {
     const slug = params?.slug ? String(params.slug) : "";
 
     const { user, setUser, vendor, loading: userLoading } = useUser();
+    const { startChatWithUser } = useChat();
 
     const [isMobile, setIsMobile] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     // Dynamic Product State
     const [product, setProduct] = useState<any | null>(null);
+    const [vendorInfo, setVendorInfo] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
+    const [messagingLoading, setMessagingLoading] = useState(false);
+
+    const handleContactVendor = async () => {
+        if (!user?.$id) {
+            alert("Please log in to message this vendor.");
+            router.push('/signin');
+            return;
+        }
+
+        const targetUserId = vendorInfo?.users;
+        if (!targetUserId) {
+            alert("Unable to find vendor account details.");
+            return;
+        }
+
+        if (targetUserId === user.$id) {
+            alert("You cannot start a chat with yourself.");
+            return;
+        }
+
+        setMessagingLoading(true);
+        try {
+            const chatId = await startChatWithUser(targetUserId);
+            router.push(`/chats/${chatId}`);
+        } catch (err) {
+            console.error("Failed to start chat with vendor:", err);
+            alert("Failed to start chat session. Please try again.");
+        } finally {
+            setMessagingLoading(false);
+        }
+    };
 
     // Likes & Reviews states
     const [reviewsList, setReviewsList] = useState<any[]>([]);
@@ -165,6 +200,12 @@ export default function ProductDetailScreen() {
                 // If it matches a mock ID
                 if (MOCK_PRODUCTS[slug]) {
                     setProduct(MOCK_PRODUCTS[slug]);
+                    setVendorInfo({
+                        $id: MOCK_PRODUCTS[slug].vendor,
+                        businessName: "Studio Audio Gear",
+                        logoImage: "",
+                        users: "mock-user-id"
+                    });
                     // Load high fidelity mock reviews
                     setReviewsList([
                         { $id: "mock-1", user: { name: "Marcus Johnson" }, rating: 5, review: "Absolutely incredible craftsmanship. The quality completely exceeded my expectations. Highly recommend this vendor!", $createdAt: new Date(Date.now() - 86400000).toISOString() },
@@ -178,6 +219,16 @@ export default function ProductDetailScreen() {
                         throw new Error("Product not found");
                     }
                     setProduct(fetched);
+
+                    // Fetch vendor details
+                    if (fetched.vendor && !fetched.vendor.startsWith("mock-vendor-")) {
+                        try {
+                            const vInfo = await getVendorById(fetched.vendor);
+                            setVendorInfo(vInfo);
+                        } catch (vErr) {
+                            console.error("Failed to load vendor details:", vErr);
+                        }
+                    }
 
                     // Fetch reviews
                     try {
@@ -535,11 +586,18 @@ export default function ProductDetailScreen() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                     <p style={{ fontSize: '13.5px', fontWeight: '600', color: '#111', margin: '0 0 8px 0' }}>Interested in this item?</p>
                                     <button
-                                        onClick={() => router.push('/chats')}
-                                        style={{ width: '100%', backgroundColor: '#B9001B', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '0.8rem', fontSize: '14.5px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'background-color 0.2s' }}
+                                        onClick={handleContactVendor}
+                                        disabled={messagingLoading}
+                                        style={{ width: '100%', backgroundColor: '#B9001B', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '0.8rem', fontSize: '14.5px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'background-color 0.2s', opacity: messagingLoading ? 0.7 : 1 }}
                                     >
-                                        <MessageIcon />
-                                        Message Vendor
+                                        {messagingLoading ? (
+                                            <div style={{ width: '20px', height: '20px', border: '2px solid #FFF', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                                        ) : (
+                                            <>
+                                                <MessageIcon />
+                                                Message Vendor
+                                            </>
+                                        )}
                                     </button>
                                 </div>
                             )}
@@ -547,13 +605,22 @@ export default function ProductDetailScreen() {
 
                         {/* Vendor Profile Box */}
                         <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #EDEDED' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div 
+                                onClick={() => vendorInfo?.users && router.push(`/profile/${vendorInfo.users}`)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+                            >
                                 {/* Vendor Avatar */}
-                                <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#D2D6DC', overflow: 'hidden' }}>
-                                    <svg width="42" height="42" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" fill="#E8ECEF" /><circle cx="16" cy="13" r="6" fill="#B0BEC5" /><path d="M4 28C4 22.4772 8.47715 18 14 18H18C23.5228 18 28 22.4772 28 28V32H4V28Z" fill="#B0BEC5" /></svg>
+                                <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#D2D6DC', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E5E7EB' }}>
+                                    {vendorInfo?.logoImage ? (
+                                        <img src={vendorInfo.logoImage} alt={vendorInfo.businessName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        <svg width="42" height="42" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" fill="#E8ECEF" /><circle cx="16" cy="13" r="6" fill="#B0BEC5" /><path d="M4 28C4 22.4772 8.47715 18 14 18H18C23.5228 18 28 22.4772 28 28V32H4V28Z" fill="#B0BEC5" /></svg>
+                                    )}
                                 </div>
                                 <div>
-                                    <h3 style={{ fontSize: '13.5px', fontWeight: '700', color: '#111', margin: '0 0 2px 0' }}>Studio Audio Gear</h3>
+                                    <h3 style={{ fontSize: '13.5px', fontWeight: '700', color: '#111', margin: '0 0 2px 0' }}>
+                                        {vendorInfo ? vendorInfo.businessName : "Loading Vendor..."}
+                                    </h3>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '12px', color: '#666' }}>
                                         <StarIcon size={11} fill="#B9001B" />
                                         <span style={{ fontWeight: '500', color: '#111' }}>{avgVal > 0 ? avgVal : "0.0"}</span> ({reviewsCount} reviews)
@@ -561,10 +628,12 @@ export default function ProductDetailScreen() {
                                 </div>
                             </div>
                             <button
-                                onClick={() => router.push('/chats')}
-                                style={{ backgroundColor: '#F3F4F6', color: '#333', border: 'none', borderRadius: '20px', padding: '6px 14px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                                onClick={() => vendorInfo?.users && router.push(`/profile/${vendorInfo.users}`)}
+                                style={{ backgroundColor: '#F3F4F6', color: '#333', border: 'none', borderRadius: '20px', padding: '6px 14px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.2s' }}
+                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#E5E7EB'}
+                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
                             >
-                                Contact
+                                View Profile
                             </button>
                         </div>
 

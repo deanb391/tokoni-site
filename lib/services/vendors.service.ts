@@ -24,6 +24,7 @@ export type Vendor = VendorDraft & {
   users: string;
   $createdAt: string;
   $updatedAt: string;
+  followersCount?: number;
 };
 
 function mapVendor(doc: any): Vendor {
@@ -104,6 +105,23 @@ export async function editVendorService(
   return mapVendor(doc);
 }
 
+export async function getVendorFollowersCountService(
+  vendorId: string
+): Promise<number> {
+  try {
+    const USER_COLLECTION = process.env.NEXT_PUBLIC_APPWRITE_USER_COLLECTION || "users";
+    const res = await databases.listDocuments(
+      DATABASE_ID,
+      USER_COLLECTION,
+      [Query.contains("following", vendorId)]
+    );
+    return res.total;
+  } catch (err) {
+    console.error("Error fetching followers count:", err);
+    return 0;
+  }
+}
+
 export async function getVendorByUserIdService(
   userId: string
 ): Promise<Vendor | null> {
@@ -118,7 +136,9 @@ export async function getVendorByUserIdService(
       return null;
     }
 
-    return mapVendor(res.documents[0]);
+    const vendor = mapVendor(res.documents[0]);
+    vendor.followersCount = await getVendorFollowersCountService(vendor.$id);
+    return vendor;
   } catch (err) {
     console.error("Error fetching vendor by userId secure service:", err);
     return null;
@@ -134,5 +154,7 @@ export async function fetchVendorService(
     vendorId
   );
 
-  return mapVendor(doc);
+  const vendor = mapVendor(doc);
+  vendor.followersCount = await getVendorFollowersCountService(vendorId);
+  return vendor;
 }

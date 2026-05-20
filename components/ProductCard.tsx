@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
+import { useChat } from '@/context/ChatContext';
+import { getVendorById } from '@/lib/api/vendors';
 import { toggleLikeProduct } from '@/lib/api/products';
 import { Product } from '@/lib/services/products.service';
 import { Heart, MapPin, MessageCircle } from 'lucide-react';
@@ -67,9 +69,35 @@ export default function ProductCard({ product: initialProduct }: ProductCardProp
         }
     };
 
-    const handleContactClick = (e: React.MouseEvent) => {
+    const { startChatWithUser } = useChat();
+
+    const handleContactClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        // Placeholder functionality: no action for now
+        if (!user?.$id) {
+            alert("Please log in to contact this vendor.");
+            router.push('/signin');
+            return;
+        }
+        try {
+            let targetUserId = "";
+            if (product.vendor.startsWith("mock-vendor-")) {
+                targetUserId = "mock-user-id";
+            } else {
+                const vendorData = await getVendorById(product.vendor);
+                targetUserId = vendorData.users;
+            }
+
+            if (targetUserId === user.$id) {
+                alert("You cannot start a chat with yourself.");
+                return;
+            }
+
+            const chatId = await startChatWithUser(targetUserId);
+            router.push(`/chats/${chatId}`);
+        } catch (err) {
+            console.error("Failed to start chat with vendor:", err);
+            alert("Failed to start chat session. Please try again.");
+        }
     };
 
     return (

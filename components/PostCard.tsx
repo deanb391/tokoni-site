@@ -9,6 +9,7 @@ import CommentDrawer from "@/components/CommentDrawer";
 import { useUser } from "@/context/UserContext";
 import { useFeed } from "@/context/FeedContext";
 import { toggleFollowVendor, toggleSavePost } from "@/lib/api/users";
+import { getVendorById } from "@/lib/api/vendors";
 
 interface PostCardProps {
     post: Post;
@@ -41,11 +42,37 @@ export default function PostCard({
     const { toggleSaveCount, incrementCommentCount } = useFeed();
     const [followingLoading, setFollowingLoading] = useState(false);
     const [saveLoading, setSaveLoading] = useState(false);
+    const [vendorUserId, setVendorUserId] = useState<string | null>(null);
 
     const isFollowing = user?.following?.includes(post.vendor) || false;
     const isSaved = user?.savedPosts?.includes(post.$id) || false;
 
     const videoRef = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        if (!post.vendor) return;
+        if (post.vendor.startsWith("mock-vendor-")) {
+            setVendorUserId("mock-user-id");
+            return;
+        }
+
+        let isMounted = true;
+        const loadVendorUser = async () => {
+            try {
+                const vendorData = await getVendorById(post.vendor);
+                if (vendorData && isMounted) {
+                    setVendorUserId(vendorData.users);
+                }
+            } catch (err) {
+                console.error("Failed to load vendor user ID in PostCard:", err);
+            }
+        };
+
+        loadVendorUser();
+        return () => {
+            isMounted = false;
+        };
+    }, [post.vendor]);
 
     useEffect(() => {
         const videoEl = videoRef.current;
@@ -165,7 +192,7 @@ export default function PostCard({
             {/* Post Header */}
             <div className="p-3.5 flex justify-between items-center border-b border-neutral-100">
                 <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-full bg-red-50 border border-neutral-200 overflow-hidden flex items-center justify-center flex-shrink-0">
+                    <Link href={vendorUserId ? `/profile/${vendorUserId}` : "#"} className="w-9 h-9 rounded-full bg-red-50 border border-neutral-200 overflow-hidden flex items-center justify-center flex-shrink-0 hover:opacity-85 transition-opacity">
                         {vendorLogo ? (
                             <img src={vendorLogo} alt={vendorName} className="w-full h-full object-cover" />
                         ) : (
@@ -173,15 +200,17 @@ export default function PostCard({
                                 {vendorName.slice(0, 2).toUpperCase()}
                             </span>
                         )}
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-2">
                         <div className="flex flex-col">
-                            <span className="text-sm font-bold text-neutral-900 leading-tight">{vendorName}</span>
+                            <Link href={vendorUserId ? `/profile/${vendorUserId}` : "#"} className="text-sm font-bold text-neutral-900 leading-tight hover:underline">
+                                {vendorName}
+                            </Link>
                             <span className="text-[11px] text-neutral-400">
                                 {new Date(post.$createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                             </span>
                         </div>
-                        {user && user.$id !== post.vendor && (
+                        {user && vendorUserId && user.$id !== vendorUserId && (
                             <button
                                 onClick={handleFollowToggle}
                                 disabled={followingLoading}
@@ -326,7 +355,9 @@ export default function PostCard({
                 </div>
                 {post.caption && (
                     <div className="text-neutral-800 leading-normal font-medium break-words whitespace-pre-wrap">
-                        <span className="font-extrabold text-neutral-900 mr-2">{vendorName}</span>
+                        <Link href={vendorUserId ? `/profile/${vendorUserId}` : "#"} className="font-extrabold text-neutral-900 mr-2 hover:underline">
+                            {vendorName}
+                        </Link>
                         {post.caption.length <= 120 || captionExpanded ? (
                             <>
                                 {post.caption}
