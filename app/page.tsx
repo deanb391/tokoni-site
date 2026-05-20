@@ -184,6 +184,7 @@ export default function HomeFeedScreen() {
                                 display: 'grid',
                                 gridTemplateColumns: mobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
                                 gap: mobile ? '0.75rem' : '1.5rem',
+                                alignItems: 'start',
                                 marginBottom: '4rem'
                             }}>
                                 {streamItems.map((item, index) => {

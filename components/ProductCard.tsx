@@ -243,11 +243,13 @@ export default function ProductCard({ product: initialProduct }: ProductCardProp
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '6px',
                     marginTop: 'auto',
                     paddingTop: '10px',
                     borderTop: '1px solid #f3f4f6'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#9ca3af' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#9ca3af', flexShrink: 0 }}>
                         <MapPin className="w-3.5 h-3.5" />
                         <span style={{ fontSize: '11px', fontWeight: '600' }}>Nigeria</span>
                     </div>
@@ -266,13 +268,16 @@ export default function ProductCard({ product: initialProduct }: ProductCardProp
                             alignItems: 'center',
                             gap: '4px',
                             cursor: 'pointer',
-                            transition: 'background-color 0.2s ease'
+                            transition: 'background-color 0.2s ease',
+                            flexShrink: 0
                         }}
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1f2937'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#111827'}
                     >
                         <MessageCircle className="w-3.5 h-3.5" />
-                        Contact Vendor
+                        <span>
+                            Contact<span className="hidden lg:inline"> Vendor</span>
+                        </span>
                     </button>
                 </div>
             </div>
