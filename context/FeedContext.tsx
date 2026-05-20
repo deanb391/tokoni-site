@@ -20,6 +20,8 @@ interface FeedContextType {
   setHighestViewedIndex: (index: number) => void;
   setExpandedPostIndex: (index: number | null) => void;
   toggleLike: (postId: string) => Promise<void>;
+  incrementCommentCount: (postId: string) => void;
+  toggleSaveCount: (postId: string, isSaved: boolean) => void;
   refreshFeed: () => Promise<void>;
   fetchNextBatch: (limit?: number) => Promise<void>;
 }
@@ -76,7 +78,7 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
         setProductsMap(prev => {
           const next = { ...prev };
           results.forEach(res => {
-            if (res) next[res.id] = res.prod;
+            if (res && res.prod) next[res.id] = res.prod;
           });
           return next;
         });
@@ -205,6 +207,24 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const incrementCommentCount = (postId: string) => {
+    setPosts(prev =>
+      prev.map(p =>
+        p.$id === postId ? { ...p, comments: (p.comments || 0) + 1 } : p
+      )
+    );
+  };
+
+  const toggleSaveCount = (postId: string, isSaved: boolean) => {
+    setPosts(prev =>
+      prev.map(p =>
+        p.$id === postId
+          ? { ...p, saved: Math.max(0, (p.saved || 0) + (isSaved ? 1 : -1)) }
+          : p
+      )
+    );
+  };
+
   return (
     <FeedContext.Provider
       value={{
@@ -218,6 +238,8 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
         setHighestViewedIndex,
         setExpandedPostIndex,
         toggleLike,
+        incrementCommentCount,
+        toggleSaveCount,
         refreshFeed,
         fetchNextBatch,
       }}

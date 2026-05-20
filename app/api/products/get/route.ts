@@ -16,6 +16,13 @@ export async function GET(req: NextRequest) {
 
     const product = await getProductByIdService(productId);
 
+    if (!product) {
+      return NextResponse.json(
+        { success: false, data: null, error: "Product not found" },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
       { success: true, data: product },
       { status: 200 }

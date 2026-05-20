@@ -23,6 +23,8 @@ export type Post = {
   vendor: string;
   likes: number;
   likedBy: string[];
+  comments: number;
+  saved: number;
   $createdAt: string;
   $updatedAt: string;
 };
@@ -76,6 +78,8 @@ function mapPost(doc: any): Post {
     vendor: doc.vendor || "",
     likes: typeof doc.likes === "number" ? doc.likes : parseInt(doc.likes || "0", 10),
     likedBy: parsedLikedBy,
+    comments: typeof doc.comments === "number" ? doc.comments : parseInt(doc.comments || "0", 10),
+    saved: typeof doc.saved === "number" ? doc.saved : parseInt(doc.saved || "0", 10),
     $createdAt: doc.$createdAt,
     $updatedAt: doc.$updatedAt,
   };
@@ -98,6 +102,8 @@ export async function createPostService(
     vendor,
     likes: draft.likes || 0,
     likedBy: JSON.stringify(Array.isArray(draft.likedBy) ? draft.likedBy : []),
+    comments: 0,
+    saved: 0,
     $createdAt: now,
     $updatedAt: now,
   };
@@ -221,5 +227,47 @@ export async function getGlobalFeedPostsService(
   } catch (err) {
     console.error("Error fetching global feed posts secure service:", err);
     return { posts: [], hasMore: false };
+  }
+}
+
+export async function incrementPostCommentsService(postId: string): Promise<void> {
+  try {
+    const doc = await databases.getDocument(DATABASE_ID, POSTS_COLLECTION, postId);
+    const currentComments = typeof doc.comments === "number" ? doc.comments : parseInt(doc.comments || "0", 10);
+    await databases.updateDocument(DATABASE_ID, POSTS_COLLECTION, postId, {
+      comments: currentComments + 1,
+    });
+  } catch (error) {
+    console.error("incrementPostCommentsService error:", error);
+  }
+}
+
+export async function togglePostSavedCountService(postId: string, increment: boolean): Promise<void> {
+  try {
+    const doc = await databases.getDocument(DATABASE_ID, POSTS_COLLECTION, postId);
+    const currentSaved = typeof doc.saved === "number" ? doc.saved : parseInt(doc.saved || "0", 10);
+    const newSaved = Math.max(0, currentSaved + (increment ? 1 : -1));
+    await databases.updateDocument(DATABASE_ID, POSTS_COLLECTION, postId, {
+      saved: newSaved,
+    });
+  } catch (error) {
+    console.error("togglePostSavedCountService error:", error);
+  }
+}
+
+export async function getPostsByIdsService(ids: string[]): Promise<Post[]> {
+  if (!ids || ids.length === 0) return [];
+  try {
+    const promises = ids.map(id =>
+      databases
+        .getDocument(DATABASE_ID, POSTS_COLLECTION, id)
+        .then(mapPost)
+        .catch(() => null)
+    );
+    const results = await Promise.all(promises);
+    return results.filter((p): p is Post => p !== null);
+  } catch (error) {
+    console.error("getPostsByIdsService error:", error);
+    return [];
   }
 }

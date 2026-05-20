@@ -167,13 +167,20 @@ export async function editProductService(
 
 export async function getProductByIdService(
   productId: string
-): Promise<Product> {
-  const doc = await databases.getDocument(
-    DATABASE_ID,
-    PRODUCTS_COLLECTION,
-    productId
-  );
-  return mapProduct(doc);
+): Promise<Product | null> {
+  try {
+    const doc = await databases.getDocument(
+      DATABASE_ID,
+      PRODUCTS_COLLECTION,
+      productId
+    );
+    return mapProduct(doc);
+  } catch (err: any) {
+    if (err.code === 404) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 export async function deleteProductService(
@@ -191,6 +198,9 @@ export async function toggleLikeProductService(
   userId: string
 ): Promise<{ likes: number; likedBy: string[]; product: Product }> {
   const product = await getProductByIdService(productId);
+  if (!product) {
+    throw new Error("Product not found");
+  }
   
   let likedByList: string[] = [];
   if (product.likedBy) {
@@ -215,6 +225,37 @@ export async function toggleLikeProductService(
       $updatedAt: now
     }
   );
+
+  // Sync user's savedProducts list
+  try {
+    const userDoc = await databases.getDocument(DATABASE_ID, "users", userId);
+    let savedProducts: string[] = [];
+    if (userDoc.savedProducts) {
+      try {
+        savedProducts = typeof userDoc.savedProducts === "string" ? JSON.parse(userDoc.savedProducts) : userDoc.savedProducts;
+      } catch {
+        savedProducts = [];
+      }
+    }
+    
+    const currentlySaved = savedProducts.includes(productId);
+    let updatedSaved = [...savedProducts];
+    if (!isLiked) {
+      // The user is liking the product now (was not liked) -> add to savedProducts
+      if (!currentlySaved) {
+        updatedSaved.push(productId);
+      }
+    } else {
+      // The user is unliking the product now (was liked) -> remove from savedProducts
+      updatedSaved = updatedSaved.filter(id => id !== productId);
+    }
+    
+    await databases.updateDocument(DATABASE_ID, "users", userId, {
+      savedProducts: JSON.stringify(updatedSaved)
+    });
+  } catch (userErr) {
+    console.error("Error updating user savedProducts on product like:", userErr);
+  }
   
   const updatedProduct = mapProduct(doc);
   return {
@@ -222,4 +263,86 @@ export async function toggleLikeProductService(
     likedBy: updatedProduct.likedBy,
     product: updatedProduct
   };
+}
+
+export async function getProductsByIdsService(ids: string[]): Promise<Product[]> {
+  if (!ids || ids.length === 0) return [];
+  try {
+    const promises = ids.map(id =>
+      databases
+        .getDocument(DATABASE_ID, PRODUCTS_COLLECTION, id)
+        .then(mapProduct)
+        .catch(() => null)
+    );
+    const results = await Promise.all(promises);
+    return results.filter((p): p is Product => p !== null);
+  } catch (error) {
+    console.error("getProductsByIdsService error:", error);
+    return [];
+  }
+}
+
+export async function getGlobalProductsService(
+  limit = 10,
+  cursor?: string,
+  category?: string,
+  search?: string,
+  sponsored?: boolean
+): Promise<{ products: Product[]; nextCursor?: string; hasMore: boolean }> {
+  try {
+    const queries: any[] = [
+      Query.orderDesc("$createdAt"),
+      Query.limit(limit),
+    ];
+
+    if (cursor) {
+      queries.push(Query.cursorAfter(cursor));
+    }
+
+    if (category && category !== "All Categories") {
+      queries.push(Query.equal("category", category));
+    }
+
+    if (search) {
+      queries.push(Query.contains("name", search));
+    }
+
+    if (sponsored) {
+      queries.push(Query.equal("sponsored", true));
+    }
+
+    const res = await databases.listDocuments(
+      DATABASE_ID,
+      PRODUCTS_COLLECTION,
+      queries
+    );
+
+    const products = res.documents.map(mapProduct);
+    const nextCursor =
+      res.documents.length === limit
+        ? res.documents[res.documents.length - 1].$id
+        : undefined;
+
+    return {
+      products,
+      nextCursor,
+      hasMore: Boolean(nextCursor),
+    };
+  } catch (err: any) {
+    // If it's a sponsored query and it fails (e.g. attribute not found), fallback to normal query and mock sponsored flag on first few
+    if (sponsored) {
+      try {
+        const fallback = await getGlobalProductsService(limit, cursor, category, search, false);
+        return {
+          products: fallback.products.map((p, idx) => ({ ...p, sponsored: idx % 3 === 0 })),
+          nextCursor: fallback.nextCursor,
+          hasMore: fallback.hasMore
+        };
+      } catch (fallbackErr) {
+        console.error("Fallback sponsored query error:", fallbackErr);
+      }
+    }
+    console.error("Error fetching global products secure service:", err);
+    return { products: [], hasMore: false };
+  }
 }

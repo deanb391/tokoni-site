@@ -125,7 +125,7 @@ export default function ProductDetailScreen() {
     const params = useParams();
     const slug = params?.slug ? String(params.slug) : "";
 
-    const { user, vendor, loading: userLoading } = useUser();
+    const { user, setUser, vendor, loading: userLoading } = useUser();
 
     const [isMobile, setIsMobile] = useState(false);
     const [mounted, setMounted] = useState(false);
@@ -174,6 +174,9 @@ export default function ProductDetailScreen() {
                     setReviewsCount(2);
                 } else {
                     const fetched = await getProductById(slug);
+                    if (!fetched) {
+                        throw new Error("Product not found");
+                    }
                     setProduct(fetched);
 
                     // Fetch reviews
@@ -247,6 +250,9 @@ export default function ProductDetailScreen() {
                 likes: res.likes,
                 likedBy: res.likedBy
             }));
+            if (res.user && setUser) {
+                setUser(res.user);
+            }
         } catch (err) {
             console.error("Failed to update liked action in Appwrite, reverting...", err);
             // Revert state

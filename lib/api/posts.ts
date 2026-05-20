@@ -97,3 +97,21 @@ export async function getGlobalFeedPosts(
     hasMore: data.hasMore || false,
   };
 }
+
+export async function getPostsByIds(
+  postIds: string[]
+): Promise<Post[]> {
+  if (!postIds || postIds.length === 0) return [];
+  const res = await fetch(`/api/posts/list?ids=${encodeURIComponent(postIds.join(","))}`, {
+    method: "GET",
+    headers: jsonHeaders,
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to fetch posts");
+  }
+
+  const data = await res.json();
+  return data.posts || [];
+}

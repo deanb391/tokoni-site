@@ -21,6 +21,9 @@ type User = {
   isAdmin?: boolean;
   isVendor?: boolean;
   $createdAt: string;
+  following?: string[];
+  savedPosts?: string[];
+  savedProducts?: string[];
 };
 
 type UserContextType = {
@@ -71,8 +74,44 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     try {
       const currentUser = await getCurrentUser();
-      console.log("User: ", currentUser)
-      setUser(currentUser as unknown as User);
+      if (currentUser) {
+        let following: string[] = [];
+        let savedPosts: string[] = [];
+        let savedProducts: string[] = [];
+
+        if (currentUser.following) {
+          try {
+            following = typeof currentUser.following === "string" ? JSON.parse(currentUser.following) : currentUser.following;
+          } catch {
+            following = [];
+          }
+        }
+        if (currentUser.savedPosts) {
+          try {
+            savedPosts = typeof currentUser.savedPosts === "string" ? JSON.parse(currentUser.savedPosts) : currentUser.savedPosts;
+          } catch {
+            savedPosts = [];
+          }
+        }
+        if (currentUser.savedProducts) {
+          try {
+            savedProducts = typeof currentUser.savedProducts === "string" ? JSON.parse(currentUser.savedProducts) : currentUser.savedProducts;
+          } catch {
+            savedProducts = [];
+          }
+        }
+
+        const parsedUser = {
+          ...currentUser,
+          following,
+          savedPosts,
+          savedProducts,
+        };
+
+        setUser(parsedUser as unknown as User);
+      } else {
+        setUser(null);
+      }
 
       if (currentUser) {
         // Update user active status

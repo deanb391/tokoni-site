@@ -522,7 +522,7 @@ export default function MenuScreen() {
                                     <BookmarkIcon />
                                 </div>
                                 <span style={{ fontSize: '15px', fontWeight: '500', color: '#111111' }}>
-                                    Saved Products
+                                    Saved Products & Posts
                                 </span>
                             </div>
                             <ChevronRightIcon />

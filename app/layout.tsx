@@ -4,6 +4,8 @@ import "./globals.css";
 import MainLayout from "@/components/MainLayout";
 import { UserProvider } from "@/context/UserContext";
 import { FeedProvider } from "@/context/FeedContext";
+import { HomeFeedProvider } from "@/context/HomeFeedContext";
+import { ProductsProvider } from "@/context/ProductsContext";
 import ExpandedPostContainer from "@/components/ExpandedPostContainer";
 
 const headingFont = Outfit({
@@ -36,8 +38,12 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <UserProvider>
           <FeedProvider>
-            <MainLayout>{children}</MainLayout>
-            <ExpandedPostContainer />
+            <HomeFeedProvider>
+              <ProductsProvider>
+                <MainLayout>{children}</MainLayout>
+                <ExpandedPostContainer />
+              </ProductsProvider>
+            </HomeFeedProvider>
           </FeedProvider>
         </UserProvider>
       </body>

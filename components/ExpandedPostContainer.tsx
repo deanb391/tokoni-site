@@ -3,11 +3,51 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useFeed } from "@/context/FeedContext";
 import { useUser } from "@/context/UserContext";
-import { X, Heart, MessageCircle, Send, Bookmark, ShoppingBag, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
+import { X, Heart, MessageCircle, Send, Bookmark, ShoppingBag, ChevronUp, ChevronDown, Loader2, Play, Pause } from "lucide-react";
 import Link from "next/link";
+import CommentDrawer from "@/components/CommentDrawer";
+import { toggleFollowVendor, toggleSavePost } from "@/lib/api/users";
 
 export default function ExpandedPostContainer() {
-  const { user } = useUser();
+  const { user, setUser } = useUser();
+  const [followingLoading, setFollowingLoading] = useState(false);
+  const [saveLoading, setSaveLoading] = useState(false);
+
+  const handleFollowToggle = async (vendorId: string) => {
+    if (!user?.$id) {
+      alert("Please sign in to follow vendors.");
+      return;
+    }
+    setFollowingLoading(true);
+    try {
+      const updated = await toggleFollowVendor(user.$id, vendorId);
+      setUser(updated);
+    } catch (err) {
+      console.error("Failed to toggle follow vendor:", err);
+    } finally {
+      setFollowingLoading(false);
+    }
+  };
+
+  const handleSaveToggle = async (postId: string) => {
+    if (!user?.$id) {
+      alert("Please sign in to save posts.");
+      return;
+    }
+    setSaveLoading(true);
+    const isCurrentlySaved = user?.savedPosts?.includes(postId) || false;
+    const willBeSaved = !isCurrentlySaved;
+    toggleSaveCount(postId, willBeSaved);
+    try {
+      const updated = await toggleSavePost(user.$id, postId);
+      setUser(updated);
+    } catch (err) {
+      console.error("Failed to toggle save post:", err);
+      toggleSaveCount(postId, !willBeSaved);
+    } finally {
+      setSaveLoading(false);
+    }
+  };
   const {
     posts,
     loading,
@@ -18,13 +58,54 @@ export default function ExpandedPostContainer() {
     productsMap,
     vendorsMap,
     toggleLike,
+    toggleSaveCount,
+    incrementCommentCount,
     fetchNextBatch
   } = useFeed();
 
   const [activeMediaIndexes, setActiveMediaIndexes] = useState<Record<string, number>>({});
   const [captionOverlayPostId, setCaptionOverlayPostId] = useState<string | null>(null);
+  const [commentDrawerPostId, setCommentDrawerPostId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const videoRefs = useRef<Record<number, HTMLVideoElement | null>>({});
+
+  const [activeFeedback, setActiveFeedback] = useState<{ postId: string; type: "play" | "pause" } | null>(null);
+  const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showFeedback = (postId: string, type: "play" | "pause") => {
+    if (feedbackTimeoutRef.current) {
+      clearTimeout(feedbackTimeoutRef.current);
+    }
+    setActiveFeedback({ postId, type });
+    feedbackTimeoutRef.current = setTimeout(() => {
+      setActiveFeedback(null);
+    }, 2000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Synchronize playing and pausing video elements
+  useEffect(() => {
+    Object.entries(videoRefs.current).forEach(([idxStr, video]) => {
+      if (!video) return;
+      const idx = parseInt(idxStr, 10);
+      if (idx === expandedPostIndex) {
+        video.play().catch(() => { });
+      } else {
+        video.pause();
+        try {
+          video.currentTime = 0;
+        } catch (_) { }
+      }
+    });
+  }, [expandedPostIndex]);
 
   // Ensure active index is synced to highest viewed index for prefetching
   useEffect(() => {
@@ -92,6 +173,33 @@ export default function ExpandedPostContainer() {
 
   return (
     <div className="fixed inset-0 bg-neutral-950 z-50 flex items-center justify-center select-none overflow-hidden">
+      <style>{`
+        @keyframes scaleUpFadeOut {
+          0% {
+            transform: scale(0.6);
+            opacity: 0;
+          }
+          15% {
+            transform: scale(1.1);
+            opacity: 0.95;
+          }
+          25% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          75% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(0.85);
+            opacity: 0;
+          }
+        }
+        .animate-scale-up-fade-out {
+          animation: scaleUpFadeOut 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
       {/* Mobile Back / Close Button */}
       <button
         onClick={handleClose}
@@ -120,21 +228,37 @@ export default function ExpandedPostContainer() {
               {/* Media Section */}
               <div className="w-full h-full flex items-center justify-center relative">
                 {post.type === "video" ? (
-                  <video
-                    src={post.media[0]}
-                    autoPlay={idx === expandedPostIndex}
-                    loop
-                    playsInline
-                    onClick={(e) => {
-                      const v = e.currentTarget;
-                      if (v.paused) {
-                        v.play().catch(() => {});
-                      } else {
-                        v.pause();
-                      }
-                    }}
-                    className="w-full h-full object-contain cursor-pointer"
-                  />
+                  <>
+                    <video
+                      ref={el => { videoRefs.current[idx] = el; }}
+                      src={post.media[0]}
+                      autoPlay={idx === expandedPostIndex}
+                      loop
+                      playsInline
+                      onClick={(e) => {
+                        const v = e.currentTarget;
+                        if (v.paused) {
+                          v.play().catch(() => { });
+                          showFeedback(post.$id, "play");
+                        } else {
+                          v.pause();
+                          showFeedback(post.$id, "pause");
+                        }
+                      }}
+                      className="w-full h-full object-contain cursor-pointer"
+                    />
+                    {activeFeedback?.postId === post.$id && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+                        <div className="bg-black/60 text-white p-5 rounded-full backdrop-blur-xs shadow-xl animate-scale-up-fade-out flex items-center justify-center">
+                          {activeFeedback.type === "play" ? (
+                            <Play className="w-10 h-10 fill-current ml-1" />
+                          ) : (
+                            <Pause className="w-10 h-10 fill-current" />
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="relative w-full h-full flex items-center justify-center">
                     <img
@@ -167,9 +291,8 @@ export default function ExpandedPostContainer() {
                         {post.media.map((_, dotIdx) => (
                           <div
                             key={dotIdx}
-                            className={`w-1.5 h-1.5 rounded-full transition-all ${
-                              dotIdx === activeIdx ? "bg-white scale-125" : "bg-white/40"
-                            }`}
+                            className={`w-1.5 h-1.5 rounded-full transition-all ${dotIdx === activeIdx ? "bg-white scale-125" : "bg-white/40"
+                              }`}
                           />
                         ))}
                       </div>
@@ -178,7 +301,7 @@ export default function ExpandedPostContainer() {
                 )}
 
                 {/* Info Overlay (Bottom-left side) */}
-                <div className="absolute bottom-0 left-0 right-14 p-4 md:p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col gap-2 z-10 text-white">
+                <div className="absolute bottom-6 left-0 right-14 p-4 md:p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col gap-2 z-10 text-white">
                   <div className="flex items-center gap-2.5">
                     <div className="w-9 h-9 rounded-full bg-red-600 overflow-hidden flex items-center justify-center border border-white/20">
                       {vendor?.logoImage ? (
@@ -192,6 +315,22 @@ export default function ExpandedPostContainer() {
                     <span className="text-sm font-bold truncate max-w-[200px]">
                       {vendor?.businessName || "Tokoni Vendor"}
                     </span>
+                    {user && user.$id !== post.vendor && (
+                      <button
+                        onClick={() => handleFollowToggle(post.vendor)}
+                        disabled={followingLoading}
+                        className={`text-[9px] font-black px-2 py-0.5 rounded-full border transition-all cursor-pointer flex items-center justify-center min-w-[50px] ${user.following?.includes(post.vendor)
+                          ? "bg-white/10 text-neutral-300 border-white/20 hover:bg-white/20"
+                          : "bg-[#B9001B] hover:bg-[#B9001B]/90 text-white border-transparent"
+                          }`}
+                      >
+                        {followingLoading ? (
+                          <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                        ) : (
+                          user.following?.includes(post.vendor) ? "Following" : "Follow"
+                        )}
+                      </button>
+                    )}
                   </div>
 
                   {post.caption && (
@@ -251,8 +390,20 @@ export default function ExpandedPostContainer() {
                         <span className="text-xs font-bold truncate max-w-[180px]">
                           {vendor?.businessName || "Tokoni Vendor"}
                         </span>
+                        {user && user.$id !== post.vendor && (
+                          <button
+                            onClick={() => handleFollowToggle(post.vendor)}
+                            disabled={followingLoading}
+                            className={`ml-2 text-[9px] font-black px-2 py-0.5 rounded-full border transition-all cursor-pointer ${user.following?.includes(post.vendor)
+                              ? "bg-white/10 text-neutral-300 border-white/20 hover:bg-white/20"
+                              : "bg-[#B9001B] hover:bg-[#B9001B]/90 text-white border-transparent"
+                              }`}
+                          >
+                            {user.following?.includes(post.vendor) ? "Following" : "Follow"}
+                          </button>
+                        )}
                       </div>
-                      <button 
+                      <button
                         onClick={() => setCaptionOverlayPostId(null)}
                         className="text-neutral-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition-all cursor-pointer"
                       >
@@ -267,11 +418,11 @@ export default function ExpandedPostContainer() {
                 )}
 
                 {/* Action Sidebar (Right overlay) */}
-                <div className="absolute right-3 bottom-1/4 flex flex-col gap-5 items-center z-20 text-white">
+                <div className="absolute right-3 bottom-1/12 flex flex-col gap-5 items-center z-20 text-white">
                   {/* Like Button */}
                   <button
                     onClick={() => toggleLike(post.$id)}
-                    className="flex flex-col items-center gap-1.5 group cursor-pointer"
+                    className="flex flex-col items-center gap-1.2 group cursor-pointer"
                   >
                     <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-xs group-hover:bg-[#B9001B]/95 border border-white/10 transition-all group-active:scale-125">
                       <Heart className={`w-5 h-5 ${isLiked ? "fill-red-600 text-red-600" : "text-white"}`} />
@@ -280,11 +431,14 @@ export default function ExpandedPostContainer() {
                   </button>
 
                   {/* Comments */}
-                  <button className="flex flex-col items-center gap-1.5 group">
+                  <button
+                    onClick={() => setCommentDrawerPostId(post.$id)}
+                    className="flex flex-col items-center gap-1.5 group cursor-pointer"
+                  >
                     <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-xs group-hover:bg-white/20 border border-white/10 transition-all">
                       <MessageCircle className="w-5 h-5 text-white" />
                     </div>
-                    <span className="text-[10px] font-extrabold tracking-wide">0</span>
+                    <span className="text-[10px] font-extrabold tracking-wide">{post?.comments || 0}</span>
                   </button>
 
                   {/* Share */}
@@ -295,10 +449,15 @@ export default function ExpandedPostContainer() {
                   </button>
 
                   {/* Bookmark */}
-                  <button className="flex flex-col items-center gap-1.5 group">
+                  <button
+                    onClick={() => handleSaveToggle(post.$id)}
+                    disabled={saveLoading}
+                    className="flex flex-col items-center gap-1.5 group cursor-pointer"
+                  >
                     <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-xs group-hover:bg-white/20 border border-white/10 transition-all">
-                      <Bookmark className="w-5 h-5 text-white" />
+                      <Bookmark className={`w-5 h-5 ${user?.savedPosts?.includes(post.$id) ? "fill-white text-white" : "text-white"}`} />
                     </div>
+                    <span className="text-[10px] font-extrabold tracking-wide">{post?.saved || 0}</span>
                   </button>
                 </div>
               </div>
@@ -320,11 +479,10 @@ export default function ExpandedPostContainer() {
         <button
           disabled={expandedPostIndex === 0}
           onClick={() => setExpandedPostIndex(expandedPostIndex - 1)}
-          className={`p-3 rounded-xl border border-white/10 transition-all ${
-            expandedPostIndex === 0
-              ? "text-neutral-600 bg-transparent cursor-not-allowed opacity-50"
-              : "text-white bg-black/40 hover:bg-[#B9001B] hover:scale-105 active:scale-95"
-          }`}
+          className={`p-3 rounded-xl border border-white/10 transition-all ${expandedPostIndex === 0
+            ? "text-neutral-600 bg-transparent cursor-not-allowed opacity-50"
+            : "text-white bg-black/40 hover:bg-[#B9001B] hover:scale-105 active:scale-95"
+            }`}
         >
           <ChevronUp className="w-6 h-6" />
         </button>
@@ -341,15 +499,23 @@ export default function ExpandedPostContainer() {
               setExpandedPostIndex(expandedPostIndex + 1);
             }
           }}
-          className={`p-3 rounded-xl border border-white/10 transition-all ${
-            expandedPostIndex === posts.length - 1 && !hasMore
-              ? "text-neutral-600 bg-transparent cursor-not-allowed opacity-50"
-              : "text-white bg-black/40 hover:bg-[#B9001B] hover:scale-105 active:scale-95"
-          }`}
+          className={`p-3 rounded-xl border border-white/10 transition-all ${expandedPostIndex === posts.length - 1 && !hasMore
+            ? "text-neutral-600 bg-transparent cursor-not-allowed opacity-50"
+            : "text-white bg-black/40 hover:bg-[#B9001B] hover:scale-105 active:scale-95"
+            }`}
         >
           <ChevronDown className="w-6 h-6" />
         </button>
       </div>
+
+      {commentDrawerPostId && (
+        <CommentDrawer
+          postId={commentDrawerPostId}
+          isOpen={!!commentDrawerPostId}
+          onClose={() => setCommentDrawerPostId(null)}
+          onCommentsCountChange={() => incrementCommentCount(commentDrawerPostId)}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 // app/api/products/like/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { toggleLikeProductService } from "@/lib/services/products.service";
+import { getUserProfileService } from "@/lib/services/users.service";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,9 +16,10 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await toggleLikeProductService(productId, userId);
+    const updatedUser = await getUserProfileService(userId);
 
     return NextResponse.json(
-      { success: true, data: result },
+      { success: true, data: result, user: updatedUser },
       { status: 200 }
     );
   } catch (err: any) {

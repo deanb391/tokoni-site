@@ -1,35 +1,57 @@
 // app/api/products/list/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getProductsByVendorService, getProductsByVendorPaginatedService } from "@/lib/services/products.service";
+import { 
+  getProductsByVendorService, 
+  getProductsByVendorPaginatedService, 
+  getProductsByIdsService,
+  getGlobalProductsService 
+} from "@/lib/services/products.service";
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const vendor = searchParams.get("vendor");
+    const idsParam = searchParams.get("ids");
+    const vendor = searchParams.get("vendor") || undefined;
     const limitParam = searchParams.get("limit");
     const cursor = searchParams.get("cursor") || undefined;
+    const category = searchParams.get("category") || undefined;
+    const search = searchParams.get("search") || undefined;
+    const sponsoredParam = searchParams.get("sponsored");
+    const sponsored = sponsoredParam === "true" || sponsoredParam === "1" ? true : undefined;
 
-    if (!vendor) {
+    if (idsParam) {
+      const ids = idsParam.split(",").filter(Boolean);
+      const products = await getProductsByIdsService(ids);
       return NextResponse.json(
-        { error: "Missing vendor parameter" },
-        { status: 400 }
+        { success: true, products },
+        { status: 200 }
       );
     }
 
-    if (limitParam) {
-      const limit = parseInt(limitParam, 10) || 10;
-      const result = await getProductsByVendorPaginatedService(vendor, limit, cursor);
+    const limit = parseInt(limitParam || "10", 10);
+
+    if (vendor) {
+      if (limitParam) {
+        const result = await getProductsByVendorPaginatedService(vendor, limit, cursor);
+        return NextResponse.json(
+          { success: true, products: result.products, nextCursor: result.nextCursor, hasMore: result.hasMore },
+          { status: 200 }
+        );
+      }
+
+      const products = await getProductsByVendorService(vendor);
+      return NextResponse.json(
+        { success: true, products },
+        { status: 200 }
+      );
+    } else {
+      // Global query
+      const result = await getGlobalProductsService(limit, cursor, category, search, sponsored);
       return NextResponse.json(
         { success: true, products: result.products, nextCursor: result.nextCursor, hasMore: result.hasMore },
         { status: 200 }
       );
     }
-
-    const products = await getProductsByVendorService(vendor);
-    return NextResponse.json(
-      { success: true, products },
-      { status: 200 }
-    );
   } catch (err: any) {
     console.error("LIST PRODUCTS API ROUTE ERROR:", err);
     return NextResponse.json(
