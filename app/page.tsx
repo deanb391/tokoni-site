@@ -155,9 +155,56 @@ export default function HomeFeedScreen() {
                 </div>
 
                 {loading ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 0' }}>
-                        <Loader2 className="w-8 h-8 text-[#B9001B] animate-spin mb-4" />
-                        <span style={{ color: '#666', fontSize: '13.5px', fontWeight: '500' }}>Fetching updates...</span>
+                    <div>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: mobile ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))',
+                            gap: mobile ? '0.75rem' : '1.5rem',
+                            alignItems: 'start',
+                            marginBottom: '4rem'
+                        }}>
+                            {/* Product Skeleton */}
+                            <div style={{ gridColumn: 'span 1', backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '10px', border: '1px solid #EDEDED', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div className="skeleton" style={{ width: '100%', aspectRatio: '1/1', borderRadius: '8px' }}></div>
+                                <div className="skeleton" style={{ width: '80%', height: '16px', borderRadius: '4px' }}></div>
+                                <div className="skeleton" style={{ width: '40%', height: '14px', borderRadius: '4px' }}></div>
+                            </div>
+                            
+                            {/* Post Skeleton */}
+                            <div style={{ gridColumn: mobile ? 'span 2' : 'span 2', backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '12px', border: '1px solid #EDEDED', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div className="skeleton" style={{ width: '32px', height: '32px', borderRadius: '50%' }}></div>
+                                    <div className="skeleton" style={{ width: '120px', height: '14px', borderRadius: '4px' }}></div>
+                                </div>
+                                <div className="skeleton" style={{ width: '100%', height: '220px', borderRadius: '8px' }}></div>
+                                <div className="skeleton" style={{ width: '60%', height: '14px', borderRadius: '4px' }}></div>
+                            </div>
+
+                            {/* Product Skeleton */}
+                            <div style={{ gridColumn: 'span 1', backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '10px', border: '1px solid #EDEDED', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div className="skeleton" style={{ width: '100%', aspectRatio: '1/1', borderRadius: '8px' }}></div>
+                                <div className="skeleton" style={{ width: '70%', height: '16px', borderRadius: '4px' }}></div>
+                                <div className="skeleton" style={{ width: '50%', height: '14px', borderRadius: '4px' }}></div>
+                            </div>
+
+                            {/* Product Skeleton */}
+                            <div style={{ gridColumn: 'span 1', backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '10px', border: '1px solid #EDEDED', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div className="skeleton" style={{ width: '100%', aspectRatio: '1/1', borderRadius: '8px' }}></div>
+                                <div className="skeleton" style={{ width: '85%', height: '16px', borderRadius: '4px' }}></div>
+                                <div className="skeleton" style={{ width: '35%', height: '14px', borderRadius: '4px' }}></div>
+                            </div>
+                        </div>
+                        <style jsx global>{`
+                            .skeleton {
+                                background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+                                background-size: 200% 100%;
+                                animation: loading 1.5s infinite;
+                            }
+                            @keyframes loading {
+                                0% { background-position: 200% 0; }
+                                100% { background-position: -200% 0; }
+                            }
+                        `}</style>
                     </div>
                 ) : (
                     <div>

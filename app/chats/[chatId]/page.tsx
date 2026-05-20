@@ -728,7 +728,13 @@ export default function ChatDetailPage() {
                       </span>
                       {isOutgoing && (
                         <span style={{ display: "inline-flex", alignItems: "center" }}>
-                          {msg.status === "seen" ? (
+                          {(msg.status as string) === "pending" ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <title>Pending</title>
+                              <circle cx="12" cy="12" r="10" />
+                              <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                          ) : msg.status === "seen" ? (
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B9001B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M2 12l5 5L15 9" />
                               <path d="M8 12l5 5L22 9" />
@@ -931,17 +937,42 @@ export default function ChatDetailPage() {
             )}
 
             {messagesLoading ? (
-              <div
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#666",
-                  fontSize: "14px",
-                }}
-              >
-                Loading conversation thread...
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }}>
+                {/* Left side message skeleton */}
+                <div style={{ display: "flex", gap: "10px", alignSelf: "flex-start", width: "70%" }}>
+                  <div className="skeleton" style={{ width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0 }} />
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <div className="skeleton" style={{ width: "40%", height: "12px", borderRadius: "4px" }} />
+                    <div className="skeleton" style={{ width: "100%", height: "40px", borderRadius: "4px 16px 16px 16px" }} />
+                  </div>
+                </div>
+
+                {/* Right side message skeleton */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignSelf: "flex-end", width: "60%" }}>
+                  <div className="skeleton" style={{ width: "30%", height: "12px", borderRadius: "4px", alignSelf: "flex-end" }} />
+                  <div className="skeleton" style={{ width: "100%", height: "55px", borderRadius: "16px 16px 4px 16px" }} />
+                </div>
+
+                {/* Left side message skeleton */}
+                <div style={{ display: "flex", gap: "10px", alignSelf: "flex-start", width: "50%" }}>
+                  <div className="skeleton" style={{ width: "32px", height: "32px", borderRadius: "50%", flexShrink: 0 }} />
+                  <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <div className="skeleton" style={{ width: "50%", height: "12px", borderRadius: "4px" }} />
+                    <div className="skeleton" style={{ width: "100%", height: "36px", borderRadius: "4px 16px 16px 16px" }} />
+                  </div>
+                </div>
+                
+                <style jsx global>{`
+                  .skeleton {
+                    background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+                    background-size: 200% 100%;
+                    animation: loading 1.5s infinite;
+                  }
+                  @keyframes loading {
+                    0% { background-position: 200% 0; }
+                    100% { background-position: -200% 0; }
+                  }
+                `}</style>
               </div>
             ) : messages.length === 0 ? (
               <div

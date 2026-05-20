@@ -56,8 +56,12 @@ export async function POST(req: NextRequest) {
       ContentType: contentType,
     }).promise();
 
-    const url = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    // const url = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 
+
+    // Deliver uploaded files via CloudFront CDN for speed and security
+    const cdnUrl = process.env.NEXT_PUBLIC_CLOUDFRONT_URL || `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com`;
+    const url = `${cdnUrl}/${key}`;
     return NextResponse.json({ url });
   } catch (err: any) {
     console.error("S3 upload failed:", err);

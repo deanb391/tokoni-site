@@ -281,7 +281,34 @@ export default function CommentDrawer({
           ref={listRef}
           className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-thin"
         >
-          {comments.length === 0 && !loading ? (
+          {comments.length === 0 && loading ? (
+            <div className="w-full flex flex-col gap-5">
+              {[1, 2, 3].map((idx) => (
+                <div key={idx} className="flex items-start gap-3">
+                  <div className="skeleton w-8 h-8 rounded-full flex-shrink-0" />
+                  <div className="flex-1 flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="skeleton w-24 h-3.5 rounded" />
+                      <div className="skeleton w-12 h-2.5 rounded" />
+                    </div>
+                    <div className="skeleton w-full h-12 rounded-lg" />
+                    <div className="skeleton w-16 h-3 rounded" />
+                  </div>
+                </div>
+              ))}
+              <style jsx global>{`
+                .skeleton {
+                  background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+                  background-size: 200% 100%;
+                  animation: loading 1.5s infinite;
+                }
+                @keyframes loading {
+                  0% { background-position: 200% 0; }
+                  100% { background-position: -200% 0; }
+                }
+              `}</style>
+            </div>
+          ) : comments.length === 0 && !loading ? (
             <div className="h-full flex flex-col items-center justify-center gap-2 text-neutral-500 py-20">
               <MessageCircle className="w-12 h-12 text-neutral-700 animate-bounce" />
               <p className="text-xs font-bold uppercase tracking-wider">No comments yet</p>

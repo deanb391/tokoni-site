@@ -35,6 +35,8 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [profileUser, setProfileUser] = useState<any>(null);
   const [vendorInfo, setVendorInfo] = useState<any>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [expandedImage, setExpandedImage] = useState("");
   
   // Responsive design
   const [isMobile, setIsMobile] = useState(false);
@@ -211,7 +213,10 @@ export default function UserProfilePage() {
       {vendorInfo ? (
         <section style={{ backgroundColor: "#FFFFFF", borderBottom: "1px solid #EDEDED" }}>
           {vendorInfo.coverImage ? (
-            <div style={{ width: "100%", height: "220px", backgroundImage: `url(${vendorInfo.coverImage})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+            <div
+              onClick={() => { setExpandedImage(vendorInfo.coverImage); setIsExpanded(true); }}
+              style={{ width: "100%", height: "220px", backgroundImage: `url(${vendorInfo.coverImage})`, backgroundSize: "cover", backgroundPosition: "center", cursor: "zoom-in" }}
+            />
           ) : (
             <div style={{ width: "100%", height: "180px", background: "linear-gradient(to right, #B9001B, #ECA1A6, #B9001B)" }} />
           )}
@@ -220,7 +225,16 @@ export default function UserProfilePage() {
             <div style={{ display: "flex", flexDirection: mobile ? "column" : "row", alignItems: "flex-start", gap: "1.5rem" }}>
               
               {/* Logo / Avatar */}
-              <div style={{ width: "110px", height: "110px", borderRadius: "50%", backgroundColor: "#FFFFFF", border: "4px solid #FFFFFF", zIndex: 10, overflow: "hidden", marginTop: "-55px", boxShadow: "0 4px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div
+                onClick={() => {
+                  const imgUrl = vendorInfo.logoImage || profileUser.avatar;
+                  if (imgUrl) {
+                    setExpandedImage(imgUrl);
+                    setIsExpanded(true);
+                  }
+                }}
+                style={{ width: "110px", height: "110px", borderRadius: "50%", backgroundColor: "#FFFFFF", border: "4px solid #FFFFFF", zIndex: 10, overflow: "hidden", marginTop: "-55px", boxShadow: "0 4px 10px rgba(0,0,0,0.06)", display: "flex", alignItems: "center", justifyContent: "center", cursor: (vendorInfo.logoImage || profileUser.avatar) ? "zoom-in" : "default" }}
+              >
                 {vendorInfo.logoImage ? (
                   <img src={vendorInfo.logoImage} alt={vendorInfo.businessName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : profileUser.avatar ? (
@@ -390,7 +404,15 @@ export default function UserProfilePage() {
         /* Regular User Profile Layout */
         <section style={{ backgroundColor: "#FFFFFF", borderBottom: "1px solid #EDEDED", padding: "3rem 2rem" }}>
           <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <div style={{ width: "90px", height: "90px", borderRadius: "50%", backgroundColor: "#FFF0F2", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.25rem", border: "1px solid #FFCAD1" }}>
+            <div
+              onClick={() => {
+                if (profileUser.avatar) {
+                  setExpandedImage(profileUser.avatar);
+                  setIsExpanded(true);
+                }
+              }}
+              style={{ width: "90px", height: "90px", borderRadius: "50%", backgroundColor: "#FFF0F2", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.25rem", border: "1px solid #FFCAD1", cursor: profileUser.avatar ? "zoom-in" : "default" }}
+            >
               {profileUser.avatar ? (
                 <img src={profileUser.avatar} alt={profileUser.username} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (
@@ -511,6 +533,58 @@ export default function UserProfilePage() {
             </>
           )}
         </main>
+      )}
+
+      {/* Expanded Image Overlay */}
+      {isExpanded && expandedImage && (
+        <div
+          onClick={() => setIsExpanded(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.9)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            cursor: "zoom-out",
+          }}
+        >
+          <button
+            onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
+            style={{
+              position: "absolute",
+              top: "20px",
+              right: "20px",
+              background: "rgba(255,255,255,0.15)",
+              border: "none",
+              borderRadius: "50%",
+              width: "44px",
+              height: "44px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#FFF",
+              fontSize: "24px",
+              cursor: "pointer",
+              zIndex: 1010,
+            }}
+          >
+            ✕
+          </button>
+          <img
+            src={expandedImage}
+            alt="Expanded view"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: "90%",
+              maxHeight: "85%",
+              objectFit: "contain",
+              borderRadius: "8px",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+            }}
+          />
+        </div>
       )}
     </div>
   );

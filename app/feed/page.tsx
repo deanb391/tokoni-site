@@ -75,7 +75,35 @@ export default function FeedScreen() {
 
       {/* Main Feed Container */}
       <div className="w-full max-w-[540px] flex flex-col gap-6">
-        {posts.length === 0 && !loading ? (
+        {posts.length === 0 && loading ? (
+          <div className="w-full flex flex-col gap-6">
+            {[1, 2].map((idx) => (
+              <div key={idx} className="bg-white border border-neutral-100 rounded-2xl p-4 flex flex-col gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="skeleton w-10 h-10 rounded-full"></div>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="skeleton w-32 h-3.5 rounded"></div>
+                    <div className="skeleton w-20 h-2.5 rounded"></div>
+                  </div>
+                </div>
+                <div className="skeleton w-full aspect-[4/5] rounded-xl"></div>
+                <div className="skeleton w-3/4 h-4 rounded"></div>
+                <div className="skeleton w-1/2 h-3 rounded"></div>
+              </div>
+            ))}
+            <style jsx global>{`
+              .skeleton {
+                background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+                background-size: 200% 100%;
+                animation: loading 1.5s infinite;
+              }
+              @keyframes loading {
+                0% { background-position: 200% 0; }
+                100% { background-position: -200% 0; }
+              }
+            `}</style>
+          </div>
+        ) : posts.length === 0 && !loading ? (
           <div className="bg-white border border-neutral-200 rounded-2xl p-12 text-center shadow-xs flex flex-col items-center justify-center gap-4">
             <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-[#B9001B]">
               <Compass className="w-8 h-8" />

@@ -83,6 +83,14 @@ export default function ChatsSidebar({ activeChatId }: { activeChatId?: string |
         backgroundColor: "#FFFFFF",
       }}
     >
+      <style>{`
+        .chat-item-bounce {
+          transition: transform 0.1s ease, background-color 0.15s ease !important;
+        }
+        .chat-item-bounce:active {
+          transform: scale(0.96) !important;
+        }
+      `}</style>
       {/* Sidebar Search */}
       <div style={{ padding: "1rem" }}>
         <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
@@ -171,8 +179,41 @@ export default function ChatsSidebar({ activeChatId }: { activeChatId?: string |
       {/* Chat List */}
       <div style={{ flex: 1, overflowY: "auto" }}>
         {chatsLoading ? (
-          <div style={{ padding: "2rem", textAlign: "center", color: "#888", fontSize: "14px" }}>
-            Loading chats...
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {[1, 2, 3, 4, 5].map((idx) => (
+              <div
+                key={`chat-shimmer-${idx}`}
+                style={{
+                  display: "flex",
+                  padding: "1.25rem 1rem",
+                  borderBottom: "1px solid #F5F5F5",
+                  alignItems: "center",
+                }}
+              >
+                {/* Skeleton Avatar */}
+                <div className="skeleton" style={{ width: "44px", height: "44px", borderRadius: "50%", marginRight: "12px", flexShrink: 0 }} />
+                
+                {/* Skeleton Info */}
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div className="skeleton" style={{ width: "80px", height: "14px", borderRadius: "4px" }} />
+                    <div className="skeleton" style={{ width: "40px", height: "10px", borderRadius: "4px" }} />
+                  </div>
+                  <div className="skeleton" style={{ width: "150px", height: "12px", borderRadius: "4px" }} />
+                </div>
+              </div>
+            ))}
+            <style jsx global>{`
+              .skeleton {
+                background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+                background-size: 200% 100%;
+                animation: loading 1.5s infinite;
+              }
+              @keyframes loading {
+                0% { background-position: 200% 0; }
+                100% { background-position: -200% 0; }
+              }
+            `}</style>
           </div>
         ) : filteredChats.length === 0 ? (
           <div
@@ -216,6 +257,7 @@ export default function ChatsSidebar({ activeChatId }: { activeChatId?: string |
               <div
                 key={chat.$id}
                 onClick={() => router.push(`/chats/${chat.$id}`)}
+                className="chat-item-bounce"
                 style={{
                   display: "flex",
                   padding: "1.25rem 1rem",

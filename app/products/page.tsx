@@ -161,9 +161,56 @@ export default function ExploreProductsScreen() {
 
                 {/* Render Sections */}
                 {Object.keys(sections).length === 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '5rem 0' }}>
-                        <Loader2 className="w-8 h-8 text-[#B9001B] animate-spin mb-4" />
-                        <span style={{ color: '#666', fontSize: '13.5px', fontWeight: '500' }}>Preparing sections...</span>
+                    <div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+                            {[1, 2].map(rowIdx => (
+                                <div key={rowIdx} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div className="skeleton" style={{ width: '38px', height: '38px', borderRadius: '10px' }}></div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <div className="skeleton" style={{ width: '150px', height: '16px', borderRadius: '4px' }}></div>
+                                            <div className="skeleton" style={{ width: '220px', height: '12px', borderRadius: '4px' }}></div>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '1.25rem', overflowX: 'hidden' }}>
+                                        {[1, 2, 3, 4].map(idx => (
+                                            <div 
+                                                key={`section-shimmer-${idx}`}
+                                                style={{
+                                                    minWidth: '260px',
+                                                    width: '280px',
+                                                    height: '340px',
+                                                    backgroundColor: '#FFFFFF',
+                                                    borderRadius: '20px',
+                                                    border: '1px solid #EDEDED',
+                                                    padding: '12px',
+                                                    boxSizing: 'border-box',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: '10px',
+                                                    flexShrink: 0
+                                                }}
+                                            >
+                                                <div className="skeleton" style={{ width: '100%', height: '220px', borderRadius: '12px' }}></div>
+                                                <div className="skeleton" style={{ width: '80%', height: '15px', borderRadius: '4px' }}></div>
+                                                <div className="skeleton" style={{ width: '40%', height: '12px', borderRadius: '4px' }}></div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <style jsx global>{`
+                            .skeleton {
+                                background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+                                background-size: 200% 100%;
+                                animation: loading 1.5s infinite;
+                            }
+                            @keyframes loading {
+                                0% { background-position: 200% 0; }
+                                100% { background-position: -200% 0; }
+                            }
+                        `}</style>
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '3.5rem' }}>
@@ -221,16 +268,31 @@ export default function ExploreProductsScreen() {
                                                         height: '340px',
                                                         backgroundColor: '#FFFFFF',
                                                         borderRadius: '20px',
-                                                        border: '1px solid #E5E7EB',
+                                                        border: '1px solid #EDEDED',
+                                                        padding: '12px',
+                                                        boxSizing: 'border-box',
                                                         display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
+                                                        flexDirection: 'column',
+                                                        gap: '10px',
                                                         flexShrink: 0
                                                     }}
                                                 >
-                                                    <Loader2 className="w-5 h-5 text-[#B9001B] animate-spin" />
+                                                    <div className="skeleton" style={{ width: '100%', height: '220px', borderRadius: '12px' }}></div>
+                                                    <div className="skeleton" style={{ width: '80%', height: '15px', borderRadius: '4px' }}></div>
+                                                    <div className="skeleton" style={{ width: '40%', height: '12px', borderRadius: '4px' }}></div>
                                                 </div>
                                             ))}
+                                            <style jsx global>{`
+                                                .skeleton {
+                                                    background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+                                                    background-size: 200% 100%;
+                                                    animation: loading 1.5s infinite;
+                                                }
+                                                @keyframes loading {
+                                                    0% { background-position: 200% 0; }
+                                                    100% { background-position: -200% 0; }
+                                                }
+                                            `}</style>
                                         </div>
                                     ) : state.products.length === 0 ? (
                                         <div style={{

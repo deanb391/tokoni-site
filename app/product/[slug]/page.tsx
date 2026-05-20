@@ -139,6 +139,7 @@ export default function ProductDetailScreen() {
     const [loading, setLoading] = useState(true);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
     const [messagingLoading, setMessagingLoading] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const handleContactVendor = async () => {
         if (!user?.$id) {
@@ -359,12 +360,54 @@ export default function ProductDetailScreen() {
 
     if (loading || !product) {
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: '#F9FAFB', fontFamily: 'var(--font-body), sans-serif' }}>
-                <div style={{ width: '40px', height: '40px', border: '3px solid #E5E7EB', borderTop: '3px solid #B9001B', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '1.25rem' }}></div>
-                <p style={{ color: '#666', fontSize: '15px', fontWeight: '500' }}>Fetching product details...</p>
+            <div style={{ backgroundColor: '#F9FAFB', minHeight: '100vh', fontFamily: 'var(--font-body), sans-serif' }}>
+                {/* Skeleton Header */}
+                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: mobile ? '0.75rem 1rem' : '1.25rem 2rem', backgroundColor: '#FFFFFF', borderBottom: '1px solid #EDEDED' }}>
+                    <div className="skeleton" style={{ width: '40px', height: '40px', borderRadius: '50%' }}></div>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <div className="skeleton" style={{ width: '40px', height: '40px', borderRadius: '50%' }}></div>
+                        <div className="skeleton" style={{ width: '80px', height: '40px', borderRadius: '24px' }}></div>
+                    </div>
+                </header>
+
+                {/* Skeleton Body Content */}
+                <main style={{ maxWidth: '1200px', margin: '0 auto', padding: mobile ? '1.5rem 1rem' : '2.5rem 2rem', display: 'flex', flexDirection: 'column', gap: '3rem', boxSizing: 'border-box' }}>
+                    <div style={{ display: 'flex', flexDirection: mobile ? 'column' : 'row', gap: mobile ? '1.5rem' : '3rem', alignItems: 'flex-start' }}>
+                        {/* Left: Image Showcase Skeleton */}
+                        <div style={{ flex: 1.2, width: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div className="skeleton" style={{ width: '100%', aspectRatio: '16/10', borderRadius: '16px' }}></div>
+                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                <div className="skeleton" style={{ width: '72px', height: '72px', borderRadius: '8px' }}></div>
+                                <div className="skeleton" style={{ width: '72px', height: '72px', borderRadius: '8px' }}></div>
+                                <div className="skeleton" style={{ width: '72px', height: '72px', borderRadius: '8px' }}></div>
+                            </div>
+                        </div>
+
+                        {/* Right: Details Skeleton */}
+                        <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div className="skeleton" style={{ width: '120px', height: '20px', borderRadius: '10px' }}></div>
+                            <div className="skeleton" style={{ width: '85%', height: '35px', borderRadius: '6px' }}></div>
+                            <div className="skeleton" style={{ width: '150px', height: '25px', borderRadius: '6px' }}></div>
+                            <div className="skeleton" style={{ width: '100%', height: '80px', borderRadius: '8px' }}></div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <div className="skeleton" style={{ height: '55px', borderRadius: '10px' }}></div>
+                                <div className="skeleton" style={{ height: '55px', borderRadius: '10px' }}></div>
+                            </div>
+                            <div className="skeleton" style={{ height: '80px', borderRadius: '16px', marginTop: '0.5rem' }}></div>
+                            <div className="skeleton" style={{ height: '60px', borderRadius: '16px' }}></div>
+                        </div>
+                    </div>
+                </main>
+                
                 <style jsx global>{`
-                    @keyframes spin {
-                        to { transform: rotate(360deg); }
+                    .skeleton {
+                        background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+                        background-size: 200% 100%;
+                        animation: loading 1.5s infinite;
+                    }
+                    @keyframes loading {
+                        0% { background-position: 200% 0; }
+                        100% { background-position: -200% 0; }
                     }
                 `}</style>
             </div>
@@ -465,7 +508,8 @@ export default function ProductDetailScreen() {
                                 <img
                                     src={product.images[activeImageIndex]}
                                     alt={product.name}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    onClick={() => setIsExpanded(true)}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'zoom-in' }}
                                 />
                             ) : (
                                 /* Beautiful Premium Gradient Fallback Cover */
@@ -729,6 +773,58 @@ export default function ProductDetailScreen() {
                 onClose={() => setIsReviewModalOpen(false)}
                 onSubmit={handleReviewSubmit}
             />
+
+            {/* Expanded Image Overlay */}
+            {isExpanded && product.images && product.images.length > 0 && (
+                <div
+                    onClick={() => setIsExpanded(false)}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        backgroundColor: 'rgba(0,0,0,0.9)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000,
+                        cursor: 'zoom-out',
+                    }}
+                >
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
+                        style={{
+                            position: 'absolute',
+                            top: '20px',
+                            right: '20px',
+                            background: 'rgba(255,255,255,0.15)',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '44px',
+                            height: '44px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#FFF',
+                            fontSize: '24px',
+                            cursor: 'pointer',
+                            zIndex: 1010,
+                        }}
+                    >
+                        ✕
+                    </button>
+                    <img
+                        src={product.images[activeImageIndex]}
+                        alt={product.name}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            maxWidth: '90%',
+                            maxHeight: '85%',
+                            objectFit: 'contain',
+                            borderRadius: '8px',
+                            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                        }}
+                    />
+                </div>
+            )}
 
             <style jsx global>{`
                 @keyframes heartPulse {

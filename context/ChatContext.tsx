@@ -264,15 +264,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       };
 
       if (eventType.includes(".create")) {
-        setMessages((prev) => {
-          if (prev.some((m) => m.$id === parsedMessage.$id)) return prev;
-          return [...prev, parsedMessage];
-        });
-
         // Mark as read in the database
         if (currentUser && parsedMessage.senderId !== currentUser.$id) {
           clearChatUnreadCount(doc.chatId, currentUser.$id).catch(() => null);
         }
+
+        setMessages((prev) => {
+          // If we already have the real message, do nothing
+          if (prev.some((m) => m.$id === parsedMessage.$id)) return prev;
+
+          // Check if there is an optimistic pending message matching this text/media type
+          const tempIndex = prev.findIndex(
+            (m) =>
+              m.$id.startsWith("temp-") &&
+              m.senderId === parsedMessage.senderId &&
+              m.text === parsedMessage.text &&
+              (parsedMessage.mediaType === "none" || m.mediaType === parsedMessage.mediaType)
+          );
+
+          if (tempIndex !== -1) {
+            const next = [...prev];
+            next[tempIndex] = parsedMessage;
+            return next;
+          }
+
+          return [...prev, parsedMessage];
+        });
       } else if (eventType.includes(".update")) {
         setMessages((prev) =>
           prev.map((m) => (m.$id === parsedMessage.$id ? parsedMessage : m))
@@ -382,10 +399,56 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [user?.$id, fetchUserProfile, selectChat]
   );
 
-  // Send textual message
+  // Helper to synthesize a crisp message sent tick sound using Web Audio API
+  const playTickSound = useCallback(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      // A short high-pitched frequency sweep for a clean tick/pop sound
+      osc.frequency.setValueAtTime(1100, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(700, ctx.currentTime + 0.08);
+
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(ctx.currentTime + 0.08);
+    } catch (err) {
+      console.warn("Tick sound failed to play:", err);
+    }
+  }, []);
+
+  // Send textual message with optimistic updates
   const sendTextMessage = useCallback(
     async (text: string, replyTo?: string) => {
       if (!activeChatId || !user?.$id) return;
+
+      const tempId = `temp-${Date.now()}`;
+      const tempMsg: Message = {
+        $id: tempId,
+        chatId: activeChatId,
+        senderId: user.$id,
+        text,
+        media: [],
+        mediaType: "none",
+        replyTo: replyTo || "",
+        reactions: [],
+        status: "pending" as any,
+        $createdAt: new Date().toISOString(),
+        $updatedAt: new Date().toISOString(),
+      };
+
+      // Add to local state immediately (Optimistic Update)
+      setMessages((prev) => [...prev, tempMsg]);
 
       const draft: MessageDraft = {
         chatId: activeChatId,
@@ -397,19 +460,41 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       try {
         await apiSendMessage(draft);
+        playTickSound();
         // Clearing typing indicator on send
         updateTypingStatus(activeChatId, user.$id, false).catch(() => null);
       } catch (err) {
         console.error("Error sending message:", err);
+        // Remove temp message if send failed
+        setMessages((prev) => prev.filter((m) => m.$id !== tempId));
       }
     },
-    [activeChatId, user?.$id]
+    [activeChatId, user?.$id, playTickSound]
   );
 
-  // Upload and send image/video attachments
+  // Upload and send image/video attachments with optimistic updates
   const sendMediaMessage = useCallback(
     async (file: File, type: "image" | "video", text?: string, replyTo?: string) => {
       if (!activeChatId || !user?.$id) return;
+
+      const tempId = `temp-${Date.now()}`;
+      const localPreviewUrl = URL.createObjectURL(file);
+      const tempMsg: Message = {
+        $id: tempId,
+        chatId: activeChatId,
+        senderId: user.$id,
+        text: text || "",
+        media: [localPreviewUrl],
+        mediaType: type,
+        replyTo: replyTo || "",
+        reactions: [],
+        status: "pending" as any,
+        $createdAt: new Date().toISOString(),
+        $updatedAt: new Date().toISOString(),
+      };
+
+      // Add to local state immediately (Optimistic Update)
+      setMessages((prev) => [...prev, tempMsg]);
 
       try {
         // 1. Upload to storage
@@ -426,12 +511,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         };
 
         await apiSendMessage(draft);
+        playTickSound();
       } catch (err) {
         console.error("Error sending media message:", err);
+        // Remove temp message if send failed
+        setMessages((prev) => prev.filter((m) => m.$id !== tempId));
         throw err;
       }
     },
-    [activeChatId, user?.$id]
+    [activeChatId, user?.$id, playTickSound]
   );
 
   // React to message
