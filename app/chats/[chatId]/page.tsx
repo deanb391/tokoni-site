@@ -108,7 +108,7 @@ export default function ChatDetailPage() {
   const [inputText, setInputText] = useState("");
   const [isTypingLocal, setIsTypingLocal] = useState(false);
   const [replyMessage, setReplyMessage] = useState<Message | null>(null);
-  
+
   // Media upload state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileType, setFileType] = useState<"image" | "video" | null>(null);
@@ -764,7 +764,7 @@ export default function ChatDetailPage() {
                             {replyParent.senderId === user?.$id ? "You" : otherName}
                           </div>
                           <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {replyParent.text ? truncateText(replyParent.text, 60) : (replyParent.mediaType === "video" ? "🎥 Video file" : "📷 Image file")}
+                            {replyParent.text ? truncateText(replyParent.text, 30) : (replyParent.mediaType === "video" ? "🎥 Video file" : "📷 Image file")}
                           </div>
                         </div>
                       )}
@@ -856,7 +856,7 @@ export default function ChatDetailPage() {
                                       <span style={{ fontSize: '15px' }}>🛒</span>
                                       <span style={{ fontWeight: '800', fontSize: '13.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Shopping Cart</span>
                                     </div>
-                                    
+
                                     {/* Collage/Grid of Images */}
                                     <div style={{ display: 'grid', gridTemplateColumns: items.length > 1 ? 'repeat(2, 1fr)' : '1fr', gap: '4px', borderRadius: '8px', overflow: 'hidden' }}>
                                       {items.slice(0, 4).map((item: any, idx: number) => (
@@ -1084,7 +1084,7 @@ export default function ChatDetailPage() {
 
         {/* Chat Detail Thread Area */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", backgroundColor: "#F9FAFB", height: "100%" }}>
-          
+
           {/* Chat Header */}
           <div
             style={{
@@ -1254,7 +1254,7 @@ export default function ChatDetailPage() {
                     <div className="skeleton" style={{ width: "100%", height: "36px", borderRadius: "4px 16px 16px 16px" }} />
                   </div>
                 </div>
-                
+
                 <style jsx global>{`
                   .skeleton {
                     background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
@@ -1490,7 +1490,7 @@ export default function ChatDetailPage() {
                   </div>
                 </div>
               )}
-              
+
               {/* Reply Quote Indicator Bar */}
               {replyMessage && (
                 <div
@@ -1796,9 +1796,9 @@ export default function ChatDetailPage() {
                     {emoji}
                   </button>
                 ))}
-                
+
                 <div style={{ width: "1px", height: "24px", backgroundColor: "#EDEDED", margin: "0 4px" }} />
-                
+
                 {/* Reply action */}
                 <button
                   type="button"
@@ -1878,7 +1878,7 @@ export default function ChatDetailPage() {
               >
                 <CloseIcon color="#FFF" size={20} />
               </button>
-              
+
               <div style={{ position: "relative", maxWidth: "90%", maxHeight: "85%", display: "flex", justifyContent: "center" }}>
                 {activeMediaOverlay.type === "video" ? (
                   <video
