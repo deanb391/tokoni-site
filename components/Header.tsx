@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import logoImg from "@/assets/images/tokoni_logo.png";
 import { useUser } from '@/context/UserContext';
+import { useChat } from '@/context/ChatContext';
 import { account } from '@/lib/services/auth.service';
 import { Menu, X } from 'lucide-react';
 
@@ -18,6 +19,11 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, vendor, refreshUser, loading, vendorLoading } = useUser();
+  const { chats = [] } = useChat();
+
+  const unreadCount = user?.$id && Array.isArray(chats)
+    ? chats.reduce((acc, chat) => acc + (chat.unreadCounts?.[user.$id] || 0), 0)
+    : 0;
 
   const isAuthLoading = !mounted || loading || vendorLoading;
 
@@ -121,9 +127,11 @@ export default function Header() {
       `}</style>
       <header
         style={{
-          position: 'sticky',
+          position: 'fixed',
           top: 0,
-          zIndex: 50,
+          left: 0,
+          right: 0,
+          zIndex: 40,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -180,7 +188,30 @@ export default function Header() {
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  {link.icon(color, isActive)}
+                  <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                    {link.icon(color, isActive)}
+                    {link.name === 'Messages' && unreadCount > 0 && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '-8px',
+                        left: '10px',
+                        backgroundColor: BRAND_RED,
+                        color: '#FFF',
+                        fontSize: '9px',
+                        fontWeight: '700',
+                        borderRadius: '50%',
+                        minWidth: '15px',
+                        height: '15px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0 3px',
+                        boxSizing: 'border-box'
+                      }}>
+                        {unreadCount}
+                      </span>
+                    )}
+                  </div>
                   {link.name}
                   {/* Active Indicator Line - Made softer and rounded */}
                   {isActive && (
@@ -485,7 +516,30 @@ export default function Header() {
                       WebkitTapHighlightColor: 'transparent'
                     }}
                   >
-                    {link.icon(color, isActive)}
+                    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                      {link.icon(color, isActive)}
+                      {link.name === 'Messages' && unreadCount > 0 && (
+                        <span style={{
+                          position: 'absolute',
+                          top: '-8px',
+                          left: '10px',
+                          backgroundColor: BRAND_RED,
+                          color: '#FFF',
+                          fontSize: '9px',
+                          fontWeight: '700',
+                          borderRadius: '50%',
+                          minWidth: '15px',
+                          height: '15px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '0 3px',
+                          boxSizing: 'border-box'
+                        }}>
+                          {unreadCount}
+                        </span>
+                      )}
+                    </div>
                     {link.name}
                   </Link>
                 );

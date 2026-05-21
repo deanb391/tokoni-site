@@ -11,6 +11,9 @@ import { trackProductViewKeywords } from '@/lib/utils/keywordTracker';
 import { fetchReviews, createReview, calculateProductAverageRating } from '@/lib/api/reviews';
 import EditProductModal from '@/components/EditProductModal';
 import ReviewModal from '@/components/ReviewModal';
+import { getCart, addToCart, removeFromCart, CartItem } from '@/lib/utils/cart';
+import CartDrawer from '@/components/CartDrawer';
+import { ShoppingBag } from 'lucide-react';
 
 // --- Inline SVG Icons ---
 const BackIcon = () => (
@@ -165,6 +168,60 @@ export default function ProductDetailScreen() {
     const [messagingLoading, setMessagingLoading] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
 
+    // Cart management states
+    const [cartItems, setCartItems] = useState<CartItem[]>([]);
+    const [isCartOpen, setIsCartOpen] = useState(false);
+
+    useEffect(() => {
+        if (vendorInfo?.$id) {
+            setCartItems(getCart(vendorInfo.$id));
+        }
+    }, [vendorInfo]);
+
+    const handleAddToCart = () => {
+        if (!vendorInfo?.$id || !product) return;
+        const currentPrice = product.discountPrice || product.price;
+        const item: CartItem = {
+            productId: product.$id || slug,
+            name: product.name,
+            price: currentPrice,
+            image: product.images?.[0] || ""
+        };
+        addToCart(vendorInfo.$id, item);
+        setCartItems(getCart(vendorInfo.$id));
+        alert("Added to cart!");
+    };
+
+    const handleRemoveCartItem = (pId: string) => {
+        if (!vendorInfo?.$id) return;
+        removeFromCart(vendorInfo.$id, pId);
+        setCartItems(getCart(vendorInfo.$id));
+    };
+
+    const handleSendCart = async () => {
+        if (!user?.$id) {
+            alert("Please log in to message this vendor.");
+            router.push('/signin');
+            return;
+        }
+        const targetUserId = vendorInfo?.users;
+        if (!targetUserId) {
+            alert("Unable to find vendor account details.");
+            return;
+        }
+        setMessagingLoading(true);
+        try {
+            const chatId = await startChatWithUser(targetUserId);
+            router.push(`/chats/${chatId}?sendCart=true&vendorId=${vendorInfo.$id}`);
+        } catch (err) {
+            console.error("Failed to start chat with vendor:", err);
+            alert("Failed to start chat session. Please try again.");
+        } finally {
+            setMessagingLoading(false);
+            setIsCartOpen(false);
+        }
+    };
+
     const handleContactVendor = async () => {
         if (!user?.$id) {
             alert("Please log in to message this vendor.");
@@ -186,7 +243,7 @@ export default function ProductDetailScreen() {
         setMessagingLoading(true);
         try {
             const chatId = await startChatWithUser(targetUserId);
-            router.push(`/chats/${chatId}`);
+            router.push(`/chats/${chatId}?autoSendProductId=${product.$id || slug}`);
         } catch (err) {
             console.error("Failed to start chat with vendor:", err);
             alert("Failed to start chat session. Please try again.");
@@ -664,7 +721,7 @@ export default function ProductDetailScreen() {
                                     )}
                                 </div>
                             ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     <p style={{ fontSize: '13.5px', fontWeight: '600', color: '#111', margin: '0 0 8px 0' }}>Interested in this item?</p>
                                     <button
                                         onClick={handleContactVendor}
@@ -680,6 +737,14 @@ export default function ProductDetailScreen() {
                                             </>
                                         )}
                                     </button>
+                                    {vendorInfo?.$id && (
+                                        <button
+                                            onClick={handleAddToCart}
+                                            style={{ width: '100%', backgroundColor: '#FFFFFF', color: '#B9001B', border: '1.5px solid #B9001B', borderRadius: '8px', padding: '0.8rem', fontSize: '14.5px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        >
+                                            🛒 Add to Cart
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -812,7 +877,7 @@ export default function ProductDetailScreen() {
             />
 
             {/* Expanded Image Overlay */}
-            {isExpanded && product.images && product.images.length > 0 && (
+             {isExpanded && product.images && product.images.length > 0 && (
                 <div
                     onClick={() => setIsExpanded(false)}
                     style={{
@@ -862,6 +927,61 @@ export default function ProductDetailScreen() {
                     />
                 </div>
             )}
+
+            {/* Floating Cart Button */}
+            {cartItems.length > 0 && (
+                <button
+                    onClick={() => setIsCartOpen(true)}
+                    style={{
+                        position: 'fixed',
+                        bottom: '24px',
+                        right: '24px',
+                        backgroundColor: '#B9001B',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '50%',
+                        boxShadow: '0 4px 20px rgba(185, 0, 27, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        zIndex: 999,
+                        transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                    onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                    <ShoppingBag style={{ width: '24px', height: '24px' }} />
+                    <span
+                        style={{
+                            position: 'absolute',
+                            top: '-4px',
+                            right: '-4px',
+                            backgroundColor: '#111827',
+                            color: '#FFFFFF',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            padding: '4px 8px',
+                            borderRadius: '50%',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}
+                    >
+                        {cartItems.length}
+                    </span>
+                </button>
+            )}
+
+            {/* Cart Drawer Container */}
+            <CartDrawer
+                isOpen={isCartOpen}
+                onClose={() => setIsCartOpen(false)}
+                items={cartItems}
+                onRemoveItem={handleRemoveCartItem}
+                onSendCart={handleSendCart}
+                isSending={messagingLoading}
+            />
 
             <style jsx global>{`
                 @keyframes heartPulse {

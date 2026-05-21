@@ -2,11 +2,16 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useChat } from "@/context/ChatContext";
 import { useUser } from "@/context/UserContext";
 import ChatsSidebar from "@/components/chats/ChatsSidebar";
 import { Message } from "@/lib/services/messages.service";
+import { getProductById, getVendorProducts } from "@/lib/api/products";
+import { getMyVendor } from "@/lib/api/vendors";
+import { getCart, clearCart } from "@/lib/utils/cart";
+import CartDrawer from "@/components/CartDrawer";
+import { ShoppingBag, Search } from "lucide-react";
 
 // --- Inline SVGs for Icons ---
 const PhoneIcon = ({ color = "#111" }) => (
@@ -69,9 +74,16 @@ const CloseIcon = ({ color = "#666", size = 16 }) => (
 // Reaction set approved by user
 const REACTION_LIST = ["❤️", "👍", "😂", "😢", "🙏"];
 
+const truncateText = (text: string, maxLength: number = 60) => {
+  if (!text) return "";
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + "...";
+};
+
 export default function ChatDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const chatId = params.chatId as string;
 
   const { user } = useUser();
@@ -123,9 +135,29 @@ export default function ChatDetailPage() {
   // Unread messages separator state
   const [initialUnreadCount, setInitialUnreadCount] = useState<number>(0);
 
+  // Shopping Cart drawer views
+  const [activeCartItems, setActiveCartItems] = useState<any[]>([]);
+  const [isChatCartOpen, setIsChatCartOpen] = useState(false);
+
+  // Auto-send and tagging states
+  const [attachedProduct, setAttachedProduct] = useState<any | null>(null);
+
+  // Vendor & Product query states for product tagging modal
+  const [myVendor, setMyVendor] = useState<any | null>(null);
+  const [otherVendor, setOtherVendor] = useState<any | null>(null);
+  const [myProducts, setMyProducts] = useState<any[]>([]);
+  const [otherProducts, setOtherProducts] = useState<any[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
+
+  // Product tagging popup controls
+  const [activeTagTab, setActiveTagTab] = useState<"me" | "other">("other");
+  const [tagSearchQuery, setTagSearchQuery] = useState("");
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const processedParamsRef = useRef<{ sendCart?: string; autoSendProduct?: string }>({});
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Capture initial unread count before selectChat clears it
   useEffect(() => {
@@ -258,10 +290,146 @@ export default function ChatDetailPage() {
   const isOtherTyping = currentChat?.typingUsers.includes(otherUserId) || false;
   const isOtherVendor = !!otherProfile?.isVendor;
 
+  const sendCartParam = searchParams?.get("sendCart");
+  const vendorIdParam = searchParams?.get("vendorId");
+  const autoSendProductId = searchParams?.get("autoSendProductId");
+
+  // Load products & vendor details for the tag modal
+  useEffect(() => {
+    async function fetchVendorsAndProducts() {
+      if (!user?.$id) return;
+      setIsLoadingProducts(true);
+      try {
+        // Fetch current user vendor details & products
+        const myV = await getMyVendor(user.$id);
+        setMyVendor(myV);
+        if (myV?.$id) {
+          const myProds = await getVendorProducts(myV.$id);
+          setMyProducts(myProds);
+        }
+
+        // Fetch other user vendor details & products
+        if (otherUserId) {
+          const otherV = await getMyVendor(otherUserId);
+          setOtherVendor(otherV);
+          if (otherV?.$id) {
+            const otherProds = await getVendorProducts(otherV.$id);
+            setOtherProducts(otherProds);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading chat vendor/products:", err);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    }
+    if (mounted && user?.$id && otherUserId) {
+      fetchVendorsAndProducts();
+    }
+  }, [mounted, user?.$id, otherUserId]);
+
+  // Handle URL query parameters for Cart Sending and Product Auto-Sending
+  useEffect(() => {
+    async function processQueryParams() {
+      if (messagesLoading) return; // Wait for message fetching to settle
+
+      // 1. Send Cart
+      if (sendCartParam === "true" && vendorIdParam) {
+        const actionKey = `${chatId}-${vendorIdParam}`;
+        if (processedParamsRef.current.sendCart === actionKey) return;
+        processedParamsRef.current.sendCart = actionKey;
+
+        const cartItems = getCart(vendorIdParam);
+        // Clear cart immediately so that concurrent re-runs don't find it
+        clearCart(vendorIdParam);
+
+        if (cartItems.length > 0) {
+          try {
+            // Format and send message
+            const cartMessageText = "__TOKONI_CART__:" + JSON.stringify(cartItems);
+            await sendTextMessage(cartMessageText);
+          } catch (err) {
+            console.error("Failed to send cart message:", err);
+          }
+        }
+        // Clean URL query params
+        router.replace(`/chats/${chatId}`);
+        return;
+      }
+
+      // 2. Product Auto-Send context
+      if (autoSendProductId) {
+        const actionKey = `${chatId}-${autoSendProductId}`;
+        if (processedParamsRef.current.autoSendProduct === actionKey) return;
+        processedParamsRef.current.autoSendProduct = actionKey;
+
+        try {
+          const productData = await getProductById(autoSendProductId);
+          if (productData) {
+            const productContextPayload = {
+              productId: productData.$id,
+              name: productData.name,
+              price: productData.discountPrice || productData.price,
+              image: productData.images?.[0] || ""
+            };
+
+            // If chat has 0 messages, auto-send immediate message context
+            if (messages.length === 0) {
+              const autoMsgText = "__TOKONI_PRODUCT_TAG__:" + JSON.stringify({
+                ...productContextPayload,
+                text: "Hi, I am interested in this product!"
+              });
+              await sendTextMessage(autoMsgText);
+            } else {
+              // Otherwise, pre-populate input and set attachedProduct to draft
+              setAttachedProduct(productContextPayload);
+              setInputText("Hi, I am interested in this product!");
+              setTimeout(() => {
+                if (textareaRef.current) {
+                  textareaRef.current.style.height = "auto";
+                  textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+                }
+              }, 50);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to process auto-send product param:", err);
+        }
+        // Clean URL query params
+        router.replace(`/chats/${chatId}`);
+      }
+    }
+
+    if (mounted && chatId) {
+      processQueryParams();
+    }
+  }, [mounted, chatId, messagesLoading, sendCartParam, vendorIdParam, autoSendProductId, messages.length]);
+
   const initials = otherName.slice(0, 1).toUpperCase();
   const colors = ["#3B4A3F", "#0284C7", "#10B981", "#B9001B", "#6366F1", "#8B5CF6"];
   const hash = otherUserId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const avatarBg = colors[hash % colors.length];
+
+  const lastAtIdx = inputText.lastIndexOf("@");
+  const showTagModal = lastAtIdx !== -1 && (lastAtIdx === 0 || inputText[lastAtIdx - 1] === " ");
+
+  const showMyTab = !!myVendor;
+  const showOtherTab = !!otherVendor;
+
+  // Sync tab selection state based on availability
+  useEffect(() => {
+    if (showOtherTab) {
+      setActiveTagTab("other");
+    } else if (showMyTab) {
+      setActiveTagTab("me");
+    }
+  }, [showMyTab, showOtherTab]);
+
+  const displayedProducts = (activeTagTab === "me" ? myProducts : otherProducts).filter(p => {
+    const searchVal = tagSearchQuery.trim().toLowerCase();
+    if (!searchVal) return true;
+    return p.name.toLowerCase().includes(searchVal);
+  });
 
   // Typing event handler with debounced typing-stop timeout
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -319,11 +487,25 @@ export default function ChatDetailPage() {
     e.preventDefault();
     if (!inputText.trim() && !selectedFile) return;
 
-    const textToSend = inputText.trim();
+    let textToSend = inputText.trim();
     const replyToId = replyMessage?.$id || undefined;
+
+    if (attachedProduct) {
+      textToSend = "__TOKONI_PRODUCT_TAG__:" + JSON.stringify({
+        productId: attachedProduct.productId,
+        name: attachedProduct.name,
+        price: attachedProduct.price,
+        image: attachedProduct.image,
+        text: textToSend
+      });
+      setAttachedProduct(null);
+    }
 
     // Reset input indicators
     setInputText("");
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
     setReplyMessage(null);
     clearTypingTimer();
 
@@ -582,7 +764,7 @@ export default function ChatDetailPage() {
                             {replyParent.senderId === user?.$id ? "You" : otherName}
                           </div>
                           <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {replyParent.text || (replyParent.mediaType === "video" ? "🎥 Video file" : "📷 Image file")}
+                            {replyParent.text ? truncateText(replyParent.text, 60) : (replyParent.mediaType === "video" ? "🎥 Video file" : "📷 Image file")}
                           </div>
                         </div>
                       )}
@@ -662,7 +844,118 @@ export default function ChatDetailPage() {
                       )}
 
                       {/* Message Text */}
-                      {msg.text && <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.text}</div>}
+                      {msg.text && (
+                        <div>
+                          {msg.text.startsWith("__TOKONI_CART__:") ? (
+                            (() => {
+                              try {
+                                const items = JSON.parse(msg.text.slice(16));
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '220px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderBottom: isOutgoing ? '1px solid rgba(255,255,255,0.2)' : '1px solid #E5E7EB', paddingBottom: '6px' }}>
+                                      <span style={{ fontSize: '15px' }}>🛒</span>
+                                      <span style={{ fontWeight: '800', fontSize: '13.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Shopping Cart</span>
+                                    </div>
+                                    
+                                    {/* Collage/Grid of Images */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: items.length > 1 ? 'repeat(2, 1fr)' : '1fr', gap: '4px', borderRadius: '8px', overflow: 'hidden' }}>
+                                      {items.slice(0, 4).map((item: any, idx: number) => (
+                                        <div key={idx} style={{ position: 'relative', height: items.length > 2 ? '70px' : '110px', backgroundColor: '#F3F4F6' }}>
+                                          <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                          {idx === 3 && items.length > 4 && (
+                                            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 'bold', fontSize: '14px' }}>
+                                              +{items.length - 4}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+
+                                    <div style={{ fontSize: '12px', opacity: 0.9 }}>
+                                      Contains {items.length} item{items.length > 1 ? 's' : ''}
+                                    </div>
+
+                                    <button
+                                      onClick={() => {
+                                        setActiveCartItems(items);
+                                        setIsChatCartOpen(true);
+                                      }}
+                                      style={{
+                                        width: '100%',
+                                        backgroundColor: isOutgoing ? '#FFFFFF' : '#B9001B',
+                                        color: isOutgoing ? '#B9001B' : '#FFFFFF',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        padding: '8px',
+                                        fontSize: '13px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        marginTop: '4px',
+                                        boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+                                      }}
+                                    >
+                                      View Cart
+                                    </button>
+                                  </div>
+                                );
+                              } catch (e) {
+                                return <div>[Corrupted Cart Message]</div>;
+                              }
+                            })()
+                          ) : msg.text.startsWith("__TOKONI_PRODUCT_TAG__:") ? (
+                            (() => {
+                              try {
+                                const pData = JSON.parse(msg.text.slice(23));
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '220px' }}>
+                                    {/* Product Section Card */}
+                                    <div
+                                      onClick={() => router.push(`/product/${pData.productId}`)}
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '10px',
+                                        backgroundColor: isOutgoing ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.04)',
+                                        border: isOutgoing ? '1px solid rgba(255,255,255,0.2)' : '1px solid #E5E7EB',
+                                        borderRadius: '10px',
+                                        padding: '8px',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      <img
+                                        src={pData.image}
+                                        alt={pData.name}
+                                        style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px' }}
+                                      />
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: '13px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          {pData.name}
+                                        </div>
+                                        <div style={{ fontSize: '12px', fontWeight: '700', color: isOutgoing ? '#FFF' : '#B9001B', marginTop: '2px' }}>
+                                          ₦{pData.price.toLocaleString()}
+                                        </div>
+                                      </div>
+                                      <div style={{ fontSize: '11px', fontWeight: 'bold', color: isOutgoing ? '#FFF' : '#B9001B', textDecoration: 'underline', flexShrink: 0 }}>
+                                        View
+                                      </div>
+                                    </div>
+                                    {/* Text Message below card */}
+                                    {pData.text && (
+                                      <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                                        {pData.text}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              } catch (e) {
+                                return <div>[Corrupted Product Tag Message]</div>;
+                              }
+                            })()
+                          ) : (
+                            <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.text}</div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Reactions Pill Display */}
@@ -735,7 +1028,7 @@ export default function ChatDetailPage() {
                               <polyline points="12 6 12 12 16 14" />
                             </svg>
                           ) : msg.status === "seen" ? (
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B9001B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#34B7F1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M2 12l5 5L15 9" />
                               <path d="M8 12l5 5L22 9" />
                             </svg>
@@ -1056,8 +1349,147 @@ export default function ChatDetailPage() {
           </div>
 
           {/* Chat Controls Input Console */}
-          <div style={{ backgroundColor: "#FFFFFF", borderTop: "1px solid #EDEDED" }}>
+          <div style={{ backgroundColor: "#FFFFFF", borderTop: "1px solid #EDEDED", position: "relative" }}>
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column" }}>
+
+              {/* Product Tagging Autocomplete Modal */}
+              {showTagModal && (showMyTab || showOtherTab) && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '1rem',
+                    right: '1rem',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #EAEAEA',
+                    borderRadius: '16px',
+                    boxShadow: '0 -4px 20px rgba(0,0,0,0.08)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '280px',
+                    zIndex: 900,
+                    overflow: 'hidden',
+                    marginBottom: '8px'
+                  }}
+                >
+                  {/* Tabs selector */}
+                  {showMyTab && showOtherTab && (
+                    <div style={{ display: 'flex', borderBottom: '1px solid #F3F4F6' }}>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTagTab("other")}
+                        style={{
+                          flex: 1,
+                          padding: '10px',
+                          fontSize: '12.5px',
+                          fontWeight: '700',
+                          color: activeTagTab === "other" ? '#B9001B' : '#6B7280',
+                          border: 'none',
+                          background: 'none',
+                          borderBottom: activeTagTab === "other" ? '2.5px solid #B9001B' : 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {otherVendor?.businessName || "Vendor"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTagTab("me")}
+                        style={{
+                          flex: 1,
+                          padding: '10px',
+                          fontSize: '12.5px',
+                          fontWeight: '700',
+                          color: activeTagTab === "me" ? '#B9001B' : '#6B7280',
+                          border: 'none',
+                          background: 'none',
+                          borderBottom: activeTagTab === "me" ? '2.5px solid #B9001B' : 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Me
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Search Bar */}
+                  <div style={{ position: 'relative', margin: '8px 12px' }}>
+                    <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#9CA3AF' }} />
+                    <input
+                      type="text"
+                      placeholder="Search products..."
+                      value={tagSearchQuery}
+                      onChange={(e) => setTagSearchQuery(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px 8px 30px',
+                        fontSize: '13px',
+                        borderRadius: '20px',
+                        border: '1px solid #E5E7EB',
+                        outline: 'none',
+                        backgroundColor: '#F9FAFB'
+                      }}
+                    />
+                  </div>
+
+                  {/* Vertical Scroll List */}
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '4px 12px 12px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {isLoadingProducts ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', padding: '20px', fontSize: '12px', color: '#888' }}>
+                        Loading products...
+                      </div>
+                    ) : displayedProducts.length === 0 ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', padding: '20px', fontSize: '12px', color: '#888' }}>
+                        No products found
+                      </div>
+                    ) : (
+                      displayedProducts.map((p: any) => (
+                        <div
+                          key={p.$id}
+                          onClick={() => {
+                            // Remove the @ tag part from inputText
+                            const atIdx = inputText.lastIndexOf("@");
+                            setInputText(inputText.slice(0, atIdx));
+                            setAttachedProduct({
+                              productId: p.$id,
+                              name: p.name,
+                              price: p.discountPrice || p.price,
+                              image: p.images?.[0] || ""
+                            });
+                            setTagSearchQuery("");
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s',
+                            border: '1px solid #F9FAFB'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#FFF5F5'}
+                          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <img
+                            src={p.images?.[0]}
+                            alt={p.name}
+                            style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '4px', backgroundColor: '#F3F4F6' }}
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {p.name}
+                            </div>
+                            <div style={{ fontSize: '11px', fontWeight: '700', color: '#B9001B', marginTop: '1px' }}>
+                              ₦{(p.discountPrice || p.price).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
               
               {/* Reply Quote Indicator Bar */}
               {replyMessage && (
@@ -1078,18 +1510,55 @@ export default function ChatDetailPage() {
                       fontSize: "12.5px",
                       color: "#555",
                       overflow: "hidden",
+                      flex: 1,
+                      minWidth: 0,
                     }}
                   >
                     <span style={{ fontWeight: "700", color: "#111" }}>
                       Replying to {replyMessage.senderId === user?.$id ? "yourself" : otherName}
                     </span>
                     <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: "2px" }}>
-                      {replyMessage.text || (replyMessage.mediaType === "video" ? "🎥 Video file" : "📷 Image file")}
+                      {replyMessage.text ? truncateText(replyMessage.text, 60) : (replyMessage.mediaType === "video" ? "🎥 Video file" : "📷 Image file")}
                     </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setReplyMessage(null)}
+                    style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
+              )}
+
+              {/* Attached Product Preview Bar */}
+              {attachedProduct && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    backgroundColor: "#FFF8F8",
+                    borderBottom: "1px solid #EDEDED",
+                    padding: "10px 1.5rem",
+                    gap: "12px",
+                  }}
+                >
+                  <img
+                    src={attachedProduct.image}
+                    alt={attachedProduct.name}
+                    style={{ width: "40px", height: "40px", objectFit: "cover", borderRadius: "6px" }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "12.5px", fontWeight: "750", color: "#111", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {attachedProduct.name}
+                    </div>
+                    <div style={{ fontSize: "11px", fontWeight: "700", color: "#B9001B", marginTop: "2px" }}>
+                      ₦{attachedProduct.price.toLocaleString()}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAttachedProduct(null)}
                     style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
                   >
                     <CloseIcon />
@@ -1198,12 +1667,25 @@ export default function ChatDetailPage() {
                 </button>
 
                 {/* Input box */}
-                <div style={{ flex: 1, display: "flex", alignItems: "center", backgroundColor: "#F5F5F5", borderRadius: "30px", padding: "0.5rem 0.5rem 0.5rem 1.25rem" }}>
-                  <input
-                    type="text"
+                <div style={{ flex: 1, display: "flex", alignItems: "flex-end", backgroundColor: "#F5F5F5", borderRadius: "20px", padding: "8px 8px 8px 16px" }}>
+                  <textarea
+                    ref={textareaRef}
                     value={inputText}
-                    onChange={handleInputChange}
+                    onChange={(e) => {
+                      handleInputChange(e as any);
+                      // Auto-grow height logic
+                      e.target.style.height = "auto";
+                      e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                    }}
+                    onKeyDown={(e) => {
+                      // Pressing enter submits the message, shift+enter inserts newlines
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSubmit(e as any);
+                      }
+                    }}
                     placeholder={filePreview ? "Add caption..." : "Type a message..."}
+                    rows={1}
                     style={{
                       flex: 1,
                       backgroundColor: "transparent",
@@ -1211,6 +1693,13 @@ export default function ChatDetailPage() {
                       outline: "none",
                       fontSize: "16px",
                       color: "#111",
+                      resize: "none",
+                      fontFamily: "inherit",
+                      maxHeight: "120px",
+                      overflowY: "auto",
+                      paddingTop: "4px",
+                      paddingBottom: "4px",
+                      lineHeight: "20px",
                     }}
                   />
                   {/* Send Button */}
@@ -1230,6 +1719,7 @@ export default function ChatDetailPage() {
                       marginLeft: "12px",
                       opacity: (!inputText.trim() && !selectedFile) || isUploading ? 0.6 : 1,
                       transition: "opacity 0.2s ease",
+                      flexShrink: 0,
                     }}
                   >
                     {isUploading ? (
@@ -1410,6 +1900,15 @@ export default function ChatDetailPage() {
               </div>
             </div>
           )}
+
+          {/* Read-Only Cart Details Drawer */}
+          <CartDrawer
+            isOpen={isChatCartOpen}
+            onClose={() => setIsChatCartOpen(false)}
+            items={activeCartItems}
+            isReadOnly={true}
+            title="Shared Cart"
+          />
 
         </div>
       </div>

@@ -7,7 +7,8 @@ import { useChat } from '@/context/ChatContext';
 import { getVendorById } from '@/lib/api/vendors';
 import { toggleLikeProduct } from '@/lib/api/products';
 import { Product } from '@/lib/services/products.service';
-import { Heart, MapPin, MessageCircle } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, ShoppingBag } from 'lucide-react';
+import { addToCart, CartItem } from '@/lib/utils/cart';
 
 interface ProductCardProps {
     product: Product;
@@ -71,6 +72,21 @@ export default function ProductCard({ product: initialProduct }: ProductCardProp
 
     const { startChatWithUser } = useChat();
 
+    const handleAddToCart = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!product.vendor) return;
+        const currentPrice = product.discountPrice || product.price;
+        const item: CartItem = {
+            productId: product.$id,
+            name: product.name,
+            price: currentPrice,
+            image: product.images?.[0] || ""
+        };
+        addToCart(product.vendor, item);
+        alert("Added to cart!");
+        window.dispatchEvent(new Event("tokoni_cart_updated"));
+    };
+
     const handleContactClick = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!user?.$id) {
@@ -93,7 +109,7 @@ export default function ProductCard({ product: initialProduct }: ProductCardProp
             }
 
             const chatId = await startChatWithUser(targetUserId);
-            router.push(`/chats/${chatId}`);
+            router.push(`/chats/${chatId}?autoSendProductId=${product.$id}`);
         } catch (err) {
             console.error("Failed to start chat with vendor:", err);
             alert("Failed to start chat session. Please try again.");
@@ -282,31 +298,62 @@ export default function ProductCard({ product: initialProduct }: ProductCardProp
                         <span style={{ fontSize: '11px', fontWeight: '600' }}>Nigeria</span>
                     </div>
 
-                    <button
-                        onClick={handleContactClick}
-                        style={{
-                            backgroundColor: '#111827',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '20px',
-                            padding: '0.45rem 0.9rem',
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            cursor: 'pointer',
-                            transition: 'background-color 0.2s ease',
-                            flexShrink: 0
-                        }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1f2937'}
-                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#111827'}
-                    >
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        <span>
-                            Contact<span className="hidden lg:inline"> Vendor</span>
-                        </span>
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                            onClick={handleAddToCart}
+                            title="Add to Cart"
+                            style={{
+                                backgroundColor: '#B9001B',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '20px',
+                                width: '32px',
+                                height: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s ease, transform 0.15s',
+                                flexShrink: 0
+                            }}
+                            onMouseOver={(e) => {
+                                e.currentTarget.style.backgroundColor = '#9e0014';
+                                e.currentTarget.style.transform = 'scale(1.05)';
+                            }}
+                            onMouseOut={(e) => {
+                                e.currentTarget.style.backgroundColor = '#B9001B';
+                                e.currentTarget.style.transform = 'none';
+                            }}
+                        >
+                            <ShoppingBag style={{ width: "14px", height: "14px" }} />
+                        </button>
+
+                        <button
+                            onClick={handleContactClick}
+                            style={{
+                                backgroundColor: '#111827',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '20px',
+                                padding: '0.45rem 0.9rem',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s ease',
+                                flexShrink: 0
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1f2937'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#111827'}
+                        >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>
+                                Contact<span className="hidden lg:inline"> Vendor</span>
+                            </span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

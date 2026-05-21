@@ -19,7 +19,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   return (
     <>
       <Header />
-      {children}
+      <div style={{ paddingTop: '72px' }}>
+        {children}
+      </div>
       {!hideFooter && <Footer />}
     </>
   );

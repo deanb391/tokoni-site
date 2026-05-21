@@ -21,8 +21,11 @@ import {
   Calendar, 
   ArrowLeft,
   Loader2,
-  Users
+  Users,
+  ShoppingBag
 } from "lucide-react";
+import { getCart, removeFromCart, CartItem } from "@/lib/utils/cart";
+import CartDrawer from "@/components/CartDrawer";
 
 export default function UserProfilePage() {
   const router = useRouter();
@@ -56,6 +59,56 @@ export default function UserProfilePage() {
 
   // Message Sending Status
   const [messagingLoading, setMessagingLoading] = useState(false);
+
+  // Cart management states
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  useEffect(() => {
+    if (vendorInfo?.$id) {
+      setCartItems(getCart(vendorInfo.$id));
+    }
+  }, [vendorInfo]);
+
+  useEffect(() => {
+    const handleCartSync = () => {
+      if (vendorInfo?.$id) {
+        setCartItems(getCart(vendorInfo.$id));
+      }
+    };
+    window.addEventListener("tokoni_cart_updated", handleCartSync);
+    return () => window.removeEventListener("tokoni_cart_updated", handleCartSync);
+  }, [vendorInfo]);
+
+  const handleRemoveCartItem = (pId: string) => {
+    if (!vendorInfo?.$id) return;
+    removeFromCart(vendorInfo.$id, pId);
+    setCartItems(getCart(vendorInfo.$id));
+  };
+
+  const handleSendCart = async () => {
+    if (!currentUser?.$id) {
+      alert("Please log in to send your cart.");
+      router.push('/signin');
+      return;
+    }
+    const targetUserId = vendorInfo?.users;
+    if (!targetUserId) {
+      alert("Unable to find vendor account details.");
+      return;
+    }
+    setMessagingLoading(true);
+    try {
+      const chatId = await startChatWithUser(targetUserId);
+      router.push(`/chats/${chatId}?sendCart=true&vendorId=${vendorInfo.$id}`);
+    } catch (err) {
+      console.error("Failed to start chat with vendor:", err);
+      alert("Failed to start chat session. Please try again.");
+    } finally {
+      setMessagingLoading(false);
+      setIsCartOpen(false);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -586,6 +639,61 @@ export default function UserProfilePage() {
           />
         </div>
       )}
+
+      {/* Floating Cart Button */}
+      {cartItems.length > 0 && (
+        <button
+          onClick={() => setIsCartOpen(true)}
+          style={{
+            position: "fixed",
+            bottom: "24px",
+            right: "24px",
+            backgroundColor: "#B9001B",
+            color: "#FFFFFF",
+            border: "none",
+            width: "60px",
+            height: "60px",
+            borderRadius: "50%",
+            boxShadow: "0 4px 20px rgba(185, 0, 27, 0.3)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            zIndex: 999,
+            transition: "transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+          }}
+          onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.1)"}
+          onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
+        >
+          <ShoppingBag style={{ width: "24px", height: "24px" }} />
+          <span
+            style={{
+              position: "absolute",
+              top: "-4px",
+              right: "-4px",
+              backgroundColor: "#111827",
+              color: "#FFFFFF",
+              fontSize: "11px",
+              fontWeight: "bold",
+              padding: "4px 8px",
+              borderRadius: "50%",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+            }}
+          >
+            {cartItems.length}
+          </span>
+        </button>
+      )}
+
+      {/* Cart Drawer */}
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        items={cartItems}
+        onRemoveItem={handleRemoveCartItem}
+        onSendCart={handleSendCart}
+        isSending={messagingLoading}
+      />
     </div>
   );
 }

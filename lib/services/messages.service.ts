@@ -106,7 +106,11 @@ export async function createMessageService(draft: MessageDraft): Promise<Message
 
   // Update last message preview in the parent chat
   let previewText = text;
-  if (!previewText && media.length > 0) {
+  if (previewText.startsWith("__TOKONI_CART__:")) {
+    previewText = "🛒 Sent a shopping cart";
+  } else if (previewText.startsWith("__TOKONI_PRODUCT_TAG__:")) {
+    previewText = "📦 Sent a product link";
+  } else if (!previewText && media.length > 0) {
     previewText = mediaType === "video" ? "🎥 Sent a video" : "📷 Sent an image";
   }
 
@@ -164,15 +168,17 @@ export async function toggleMessageReactionService(
   const message = mapMessageDoc(doc);
 
   let updatedReactions = [...message.reactions];
-  const existingReactionIndex = updatedReactions.findIndex(
+  const exactReactionIndex = updatedReactions.findIndex(
     (r) => r.userId === userId && r.emoji === emoji
   );
 
-  if (existingReactionIndex > -1) {
+  if (exactReactionIndex > -1) {
     // Remove reaction if user clicks it again
-    updatedReactions.splice(existingReactionIndex, 1);
+    updatedReactions.splice(exactReactionIndex, 1);
   } else {
-    // Add reaction
+    // If the user already had any reaction, remove it first
+    updatedReactions = updatedReactions.filter((r) => r.userId !== userId);
+    // Add the new reaction
     updatedReactions.push({ userId, username, emoji });
   }
 

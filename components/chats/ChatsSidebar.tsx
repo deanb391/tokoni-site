@@ -371,7 +371,7 @@ export default function ChatsSidebar({ activeChatId }: { activeChatId?: string |
                       {!isTyping && chat.lastMessageSenderId === user?.$id && chat.lastMessage && (
                         <span style={{ display: "inline-flex", alignItems: "center", flexShrink: 0 }}>
                           {chat.lastMessageStatus === "seen" ? (
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#B9001B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#34B7F1" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M2 12l5 5L15 9" />
                               <path d="M8 12l5 5L22 9" />
                             </svg>

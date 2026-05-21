@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useFeed } from "@/context/FeedContext";
 import { useUser } from "@/context/UserContext";
-import { X, Heart, MessageCircle, Send, Bookmark, ShoppingBag, ChevronUp, ChevronDown, Loader2, Play, Pause } from "lucide-react";
+import { X, Heart, MessageCircle, Send, Bookmark, ShoppingBag, ChevronUp, ChevronDown, Loader2, Play, Pause, VolumeX, Volume2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import CommentDrawer from "@/components/CommentDrawer";
@@ -70,6 +70,57 @@ export default function ExpandedPostContainer() {
   } = useFeed();
 
   const [activeMediaIndexes, setActiveMediaIndexes] = useState<Record<string, number>>({});
+  const [isMuted, setIsMuted] = useState(true);
+  const [doubleTapActive, setDoubleTapActive] = useState<{ postId: string } | null>(null);
+  const [videoLoading, setVideoLoading] = useState<Record<string, boolean>>({});
+  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTapRef = useRef<number>(0);
+
+  const handleMediaClick = (postId: string, isVideo: boolean, videoElement?: HTMLVideoElement | null) => {
+    const now = Date.now();
+    const DOUBLE_TAP_DELAY = 300;
+    
+    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      // Double tap detected
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+        clickTimeoutRef.current = null;
+      }
+      
+      const post = posts.find(p => p.$id === postId);
+      if (post) {
+        const isCurrentlyLiked = user?.$id ? post.likedBy.includes(user.$id) : false;
+        if (!isCurrentlyLiked) {
+          toggleLike(postId);
+          trackPostLikeKeywords(post.caption);
+        }
+      }
+      
+      setDoubleTapActive({ postId });
+      setTimeout(() => {
+        setDoubleTapActive(null);
+      }, 800);
+      
+      lastTapRef.current = 0;
+    } else {
+      lastTapRef.current = now;
+      
+      clickTimeoutRef.current = setTimeout(() => {
+        if (isVideo && videoElement) {
+          if (videoElement.paused) {
+            videoElement.play().catch(() => {});
+            showFeedback(postId, "play");
+          } else {
+            videoElement.pause();
+            showFeedback(postId, "pause");
+          }
+        }
+        clickTimeoutRef.current = null;
+      }, DOUBLE_TAP_DELAY);
+    }
+  };
+
   const [captionOverlayPostId, setCaptionOverlayPostId] = useState<string | null>(null);
   const [commentDrawerPostId, setCommentDrawerPostId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -198,6 +249,8 @@ export default function ExpandedPostContainer() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [expandedPostIndex, posts.length, hasMore, loading]);
 
+
+
   // Scroll active item into view when active index changes
   useEffect(() => {
     if (expandedPostIndex !== null && itemRefs.current[expandedPostIndex] && containerRef.current) {
@@ -278,6 +331,31 @@ export default function ExpandedPostContainer() {
         .animate-scale-up-fade-out {
           animation: scaleUpFadeOut 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+        @keyframes heartPop {
+          0% {
+            transform: scale(0);
+            opacity: 0;
+          }
+          15% {
+            transform: scale(1.2);
+            opacity: 0.9;
+          }
+          30% {
+            transform: scale(0.9);
+            opacity: 1;
+          }
+          80% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1.4);
+            opacity: 0;
+          }
+        }
+        .animate-heart-pop {
+          animation: heartPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
       `}</style>
       {/* Mobile Back / Close Button */}
       <button
@@ -303,12 +381,19 @@ export default function ExpandedPostContainer() {
             <div
               key={post.$id}
               ref={el => { itemRefs.current[idx] = el; }}
-              className="w-full h-full flex-shrink-0 snap-start flex items-center justify-center relative bg-black"
+              className="w-full h-full flex-shrink-0 snap-start snap-always flex items-center justify-center relative bg-black"
+              style={{ scrollSnapStop: "always" }}
             >
               {/* Media Section */}
               <div className="w-full h-full flex items-center justify-center relative">
                 {post.type === "video" ? (
-                  <>
+                  <div
+                    className="relative w-full h-full flex items-center justify-center cursor-pointer"
+                    onClick={(e) => {
+                      const videoEl = videoRefs.current[idx];
+                      handleMediaClick(post.$id, true, videoEl);
+                    }}
+                  >
                     <video
                       ref={el => { videoRefs.current[idx] = el; }}
                       src={idx <= expandedPostIndex + 1 ? post.media[0] : undefined}
@@ -316,22 +401,63 @@ export default function ExpandedPostContainer() {
                       autoPlay={idx === expandedPostIndex}
                       loop
                       playsInline
-                      muted
-                      onClick={(e) => {
-                        const v = e.currentTarget;
-                        if (v.muted) {
-                          v.muted = false;
-                        }
-                        if (v.paused) {
-                          v.play().catch(() => { });
-                          showFeedback(post.$id, "play");
-                        } else {
-                          v.pause();
-                          showFeedback(post.$id, "pause");
-                        }
-                      }}
-                      className="w-full h-full object-contain cursor-pointer"
+                      muted={isMuted}
+                      onWaiting={() => setVideoLoading(prev => ({ ...prev, [post.$id]: true }))}
+                      onPlaying={() => setVideoLoading(prev => ({ ...prev, [post.$id]: false }))}
+                      onLoadStart={() => setVideoLoading(prev => ({ ...prev, [post.$id]: true }))}
+                      onCanPlay={() => setVideoLoading(prev => ({ ...prev, [post.$id]: false }))}
+                      onSeeked={() => setVideoLoading(prev => ({ ...prev, [post.$id]: false }))}
+                      onSeeking={() => setVideoLoading(prev => ({ ...prev, [post.$id]: true }))}
+                      className="w-full h-full object-contain"
                     />
+
+                    {/* Circle Loader (Instagram Style) */}
+                    {videoLoading[post.$id] && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/10 z-20 pointer-events-none">
+                        <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                      </div>
+                    )}
+
+                    {/* Mute/Unmute Overlay Span */}
+                    {isMuted && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsMuted(false);
+                          Object.values(videoRefs.current).forEach((v) => {
+                            if (v) v.muted = false;
+                          });
+                        }}
+                        className="absolute top-4 right-4 z-40 bg-black/60 hover:bg-black/80 backdrop-blur-xs text-white text-[11px] font-bold px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-1.5 cursor-pointer shadow-lg animate-pulse"
+                      >
+                        <VolumeX className="w-3.5 h-3.5" />
+                        Tap to unmute
+                      </button>
+                    )}
+
+                    {/* Mute toggle button when unmuted */}
+                    {!isMuted && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsMuted(true);
+                          Object.values(videoRefs.current).forEach((v) => {
+                            if (v) v.muted = true;
+                          });
+                        }}
+                        className="absolute top-4 right-4 z-40 bg-black/60 hover:bg-black/80 backdrop-blur-xs text-white text-[11px] font-bold p-2 rounded-full border border-white/10 flex items-center justify-center cursor-pointer shadow-lg"
+                      >
+                        <Volume2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    {/* Double-tap Heart Animation */}
+                    {doubleTapActive?.postId === post.$id && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+                        <Heart className="w-24 h-24 text-white fill-white drop-shadow-2xl animate-heart-pop" />
+                      </div>
+                    )}
+
                     {activeFeedback?.postId === post.$id && (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
                         <div className="bg-black/60 text-white p-5 rounded-full backdrop-blur-xs shadow-xl animate-scale-up-fade-out flex items-center justify-center">
@@ -343,29 +469,53 @@ export default function ExpandedPostContainer() {
                         </div>
                       </div>
                     )}
-                  </>
+                  </div>
                 ) : (
-                  <div className="relative w-full h-full flex items-center justify-center">
+                  <div
+                    className="relative w-full h-full flex items-center justify-center cursor-pointer"
+                    onClick={() => handleMediaClick(post.$id, false)}
+                  >
                     <img
                       src={idx <= expandedPostIndex + 1 ? post.media[activeIdx] : undefined}
                       loading={idx === expandedPostIndex || idx === expandedPostIndex + 1 ? "eager" : "lazy"}
+                      onLoad={() => setLoadedImages(prev => ({ ...prev, [post.media[activeIdx]]: true }))}
                       alt="Reel Slide"
                       className="w-full h-full object-contain"
                     />
 
+                    {/* Image Loading Spinner Overlay */}
+                    {!loadedImages[post.media[activeIdx]] && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-neutral-900 z-10 animate-pulse">
+                        <div className="w-12 h-12 border-4 border-white/10 border-t-white/60 rounded-full animate-spin" />
+                      </div>
+                    )}
+
+                    {/* Double-tap Heart Animation */}
+                    {doubleTapActive?.postId === post.$id && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+                        <Heart className="w-24 h-24 text-white fill-white drop-shadow-2xl animate-heart-pop" />
+                      </div>
+                    )}
+
                     {/* Carousel Nav Arrows */}
                     {activeIdx > 0 && (
                       <button
-                        onClick={() => handlePrevMedia(post.$id)}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/80 text-white p-2 rounded-full transition-all border border-white/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePrevMedia(post.$id);
+                        }}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/80 text-white p-2 rounded-full transition-all border border-white/10 z-20"
                       >
                         <ChevronUp className="w-5 h-5 -rotate-90" />
                       </button>
                     )}
                     {activeIdx < post.media.length - 1 && (
                       <button
-                        onClick={() => handleNextMedia(post.$id, post.media.length)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/80 text-white p-2 rounded-full transition-all border border-white/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleNextMedia(post.$id, post.media.length);
+                        }}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/80 text-white p-2 rounded-full transition-all border border-white/10 z-20"
                       >
                         <ChevronDown className="w-5 h-5 -rotate-90" />
                       </button>
@@ -377,7 +527,11 @@ export default function ExpandedPostContainer() {
                         {post.media.map((_, dotIdx) => (
                           <div
                             key={dotIdx}
-                            className={`w-1.5 h-1.5 rounded-full transition-all ${dotIdx === activeIdx ? "bg-white scale-125" : "bg-white/40"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMediaIndexes(prev => ({ ...prev, [post.$id]: dotIdx }));
+                            }}
+                            className={`w-1.5 h-1.5 rounded-full transition-all cursor-pointer ${dotIdx === activeIdx ? "bg-white scale-125" : "bg-white/40"
                               }`}
                           />
                         ))}
@@ -388,36 +542,43 @@ export default function ExpandedPostContainer() {
 
                 {/* Info Overlay (Bottom-left side) */}
                 <div className="absolute bottom-6 left-0 right-14 p-4 md:p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col gap-2 z-10 text-white">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-full bg-red-600 overflow-hidden flex items-center justify-center border border-white/20">
-                      {vendor?.logoImage ? (
-                        <img src={vendor.logoImage} alt={vendor.businessName} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-xs font-extrabold text-white">
-                          {vendor?.businessName?.slice(0, 2).toUpperCase() || "TK"}
-                        </span>
+                  {!vendor ? (
+                    <div className="flex items-center gap-2.5 animate-pulse">
+                      <div className="w-9 h-9 rounded-full bg-white/20" />
+                      <div className="w-28 h-3.5 bg-white/20 rounded" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-full bg-red-600 overflow-hidden flex items-center justify-center border border-white/20">
+                        {vendor?.logoImage ? (
+                          <img src={vendor.logoImage} alt={vendor.businessName} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-xs font-extrabold text-white">
+                            {vendor?.businessName?.slice(0, 2).toUpperCase() || "TK"}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-sm font-bold truncate max-w-[200px]">
+                        {vendor?.businessName || "Tokoni Vendor"}
+                      </span>
+                      {user && user.$id !== post.vendor && (
+                        <button
+                          onClick={() => handleFollowToggle(post.vendor)}
+                          disabled={followingLoading}
+                          className={`text-[9px] font-black px-2 py-0.5 rounded-full border transition-all cursor-pointer flex items-center justify-center min-w-[50px] ${user.following?.includes(post.vendor)
+                            ? "bg-white/10 text-neutral-300 border-white/20 hover:bg-white/20"
+                            : "bg-[#B9001B] hover:bg-[#B9001B]/90 text-white border-transparent"
+                            }`}
+                        >
+                          {followingLoading ? (
+                            <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                          ) : (
+                            user.following?.includes(post.vendor) ? "Following" : "Follow"
+                          )}
+                        </button>
                       )}
                     </div>
-                    <span className="text-sm font-bold truncate max-w-[200px]">
-                      {vendor?.businessName || "Tokoni Vendor"}
-                    </span>
-                    {user && user.$id !== post.vendor && (
-                      <button
-                        onClick={() => handleFollowToggle(post.vendor)}
-                        disabled={followingLoading}
-                        className={`text-[9px] font-black px-2 py-0.5 rounded-full border transition-all cursor-pointer flex items-center justify-center min-w-[50px] ${user.following?.includes(post.vendor)
-                          ? "bg-white/10 text-neutral-300 border-white/20 hover:bg-white/20"
-                          : "bg-[#B9001B] hover:bg-[#B9001B]/90 text-white border-transparent"
-                          }`}
-                      >
-                        {followingLoading ? (
-                          <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                        ) : (
-                          user.following?.includes(post.vendor) ? "Following" : "Follow"
-                        )}
-                      </button>
-                    )}
-                  </div>
+                  )}
 
                   {post.caption && (
                     <div className="text-xs text-neutral-200 leading-relaxed max-w-full break-words whitespace-pre-wrap">

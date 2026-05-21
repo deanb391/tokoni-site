@@ -53,9 +53,11 @@ export default function PostCard({
     const likeButtonRef = useRef<HTMLButtonElement>(null);
 
     const { user, setUser } = useUser();
-    const { toggleSaveCount, incrementCommentCount } = useFeed();
+    const { toggleSaveCount, incrementCommentCount, expandedPostIndex } = useFeed();
     const [followingLoading, setFollowingLoading] = useState(false);
     const [saveLoading, setSaveLoading] = useState(false);
+    const [videoLoading, setVideoLoading] = useState(true);
+    const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
     const [vendorUserId, setVendorUserId] = useState<string | null>(null);
 
     const isFollowing = user?.following?.includes(post.vendor) || false;
@@ -89,9 +91,15 @@ export default function PostCard({
         const videoEl = videoRef.current;
         if (!videoEl || post.type !== "video") return;
 
+        // If any post is expanded in reels mode, pause feed card videos immediately
+        if (expandedPostIndex !== null) {
+            videoEl.pause();
+            return;
+        }
+
         const observer = new IntersectionObserver(
             ([entry]) => {
-                if (entry.isIntersecting) {
+                if (entry.isIntersecting && expandedPostIndex === null) {
                     videoEl.play().catch(() => {
                         videoEl.muted = true;
                         videoEl.play().catch(() => {});
@@ -104,7 +112,7 @@ export default function PostCard({
         );
         observer.observe(videoEl);
         return () => observer.disconnect();
-    }, [post.type]);
+    }, [post.type, expandedPostIndex]);
 
     useEffect(() => {
         setIsLiked(currentUserId ? post.likedBy.includes(currentUserId) : false);
@@ -235,61 +243,105 @@ export default function PostCard({
 
             {/* Post Header */}
             <div className="p-3.5 flex justify-between items-center border-b border-neutral-100">
-                <div className="flex items-center gap-2.5">
-                    <Link href={vendorUserId ? `/profile/${vendorUserId}` : "#"} className="w-9 h-9 rounded-full bg-red-50 border border-neutral-200 overflow-hidden flex items-center justify-center flex-shrink-0 hover:opacity-85 transition-opacity">
-                        {vendorLogo ? (
-                            <img src={vendorLogo} alt={vendorName} className="w-full h-full object-cover" />
-                        ) : (
-                            <span className="text-xs font-bold text-[#B9001B]">{vendorName.slice(0, 2).toUpperCase()}</span>
-                        )}
-                    </Link>
-                    <div className="flex items-center gap-2">
-                        <div className="flex flex-col">
-                            <Link href={vendorUserId ? `/profile/${vendorUserId}` : "#"} className="text-sm font-bold text-neutral-900 leading-tight hover:underline">
-                                {vendorName}
-                            </Link>
-                            <span className="text-[11px] text-neutral-400">
-                                {new Date(post.$createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                            </span>
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    {!vendorName || vendorName === "Loading..." ? (
+                        <div className="flex items-center gap-2.5 w-full animate-pulse">
+                            <div className="w-9 h-9 rounded-full bg-neutral-200" />
+                            <div className="flex flex-col gap-1 flex-1">
+                                <div className="w-24 h-3.5 bg-neutral-200 rounded" />
+                                <div className="w-16 h-2 bg-neutral-200 rounded" />
+                            </div>
                         </div>
-                        {user && vendorUserId && user.$id !== vendorUserId && (
-                            <button
-                                onClick={handleFollowToggle}
-                                disabled={followingLoading}
-                                className={`ml-2 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border transition-all cursor-pointer flex items-center justify-center min-w-[55px] ${isFollowing
-                                    ? "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
-                                    : "bg-[#B9001B]/5 hover:bg-[#B9001B]/10 text-[#B9001B] border-[#B9001B]/20"
-                                    }`}
-                            >
-                                {followingLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : isFollowing ? "Following" : "Follow"}
-                            </button>
-                        )}
-                    </div>
+                    ) : (
+                        <>
+                            <Link href={vendorUserId ? `/profile/${vendorUserId}` : "#"} className="w-9 h-9 rounded-full bg-red-50 border border-neutral-200 overflow-hidden flex items-center justify-center flex-shrink-0 hover:opacity-85 transition-opacity">
+                                {vendorLogo ? (
+                                    <img src={vendorLogo} alt={vendorName} className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-xs font-bold text-[#B9001B]">{vendorName.slice(0, 2).toUpperCase()}</span>
+                                )}
+                            </Link>
+                            <div className="flex items-center gap-2">
+                                <div className="flex flex-col">
+                                    <Link href={vendorUserId ? `/profile/${vendorUserId}` : "#"} className="text-sm font-bold text-neutral-900 leading-tight hover:underline">
+                                        {vendorName}
+                                    </Link>
+                                    <span className="text-[11px] text-neutral-400">
+                                        {new Date(post.$createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </span>
+                                </div>
+                                {user && vendorUserId && user.$id !== vendorUserId && (
+                                    <button
+                                        onClick={handleFollowToggle}
+                                        disabled={followingLoading}
+                                        className={`ml-2 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border transition-all cursor-pointer flex items-center justify-center min-w-[55px] ${isFollowing
+                                            ? "bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100"
+                                            : "bg-[#B9001B]/5 hover:bg-[#B9001B]/10 text-[#B9001B] border-[#B9001B]/20"
+                                            }`}
+                                    >
+                                        {followingLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : isFollowing ? "Following" : "Follow"}
+                                    </button>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
-                <button className="text-neutral-500 hover:text-neutral-800 p-1 rounded-full hover:bg-neutral-50 transition-colors">
-                    <MoreHorizontal className="w-5 h-5" />
-                </button>
+                {vendorName && vendorName !== "Loading..." && (
+                    <button className="text-neutral-500 hover:text-neutral-800 p-1 rounded-full hover:bg-neutral-50 transition-colors">
+                        <MoreHorizontal className="w-5 h-5" />
+                    </button>
+                )}
             </div>
 
             {/* Media Slider */}
             <div onClick={onMediaClick} className="relative aspect-square bg-neutral-950 flex items-center justify-center overflow-hidden group cursor-pointer">
                 {post.type === 'video' ? (
-                    <video ref={videoRef} src={post.media[0]} controls loop playsInline className="w-full h-full object-contain" />
+                    <>
+                        <video
+                            ref={videoRef}
+                            src={post.media[0]}
+                            controls
+                            loop
+                            playsInline
+                            onWaiting={() => setVideoLoading(true)}
+                            onPlaying={() => setVideoLoading(false)}
+                            onLoadStart={() => setVideoLoading(true)}
+                            onCanPlay={() => setVideoLoading(false)}
+                            onSeeked={() => setVideoLoading(false)}
+                            onSeeking={() => setVideoLoading(true)}
+                            className="w-full h-full object-contain"
+                        />
+                        {videoLoading && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/10 z-20 pointer-events-none">
+                                <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                            </div>
+                        )}
+                    </>
                 ) : (
                     <>
-                        <img src={post.media[activeMediaIndex]} alt={`Post slide ${activeMediaIndex + 1}`} className="w-full h-full object-contain transition-all duration-300" />
+                        <img
+                            src={post.media[activeMediaIndex]}
+                            onLoad={() => setLoadedImages(prev => ({ ...prev, [post.media[activeMediaIndex]]: true }))}
+                            alt={`Post slide ${activeMediaIndex + 1}`}
+                            className="w-full h-full object-contain transition-all duration-300"
+                        />
+                        {!loadedImages[post.media[activeMediaIndex]] && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-neutral-900/10 z-10 animate-pulse">
+                                <div className="w-10 h-10 border-4 border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
+                            </div>
+                        )}
                         {post.media.length > 1 && (
                             <span className="absolute top-4 right-4 bg-black/60 backdrop-blur-[2px] text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10 select-none">
                                 {activeMediaIndex + 1}/{post.media.length}
                             </span>
                         )}
                         {activeMediaIndex > 0 && (
-                            <button type="button" onClick={handlePrev} className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-neutral-800 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-md active:scale-90">
+                            <button type="button" onClick={handlePrev} className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-neutral-800 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-md active:scale-90 z-20">
                                 <ChevronLeft className="w-5 h-5" />
                             </button>
                         )}
                         {activeMediaIndex < post.media.length - 1 && (
-                            <button type="button" onClick={handleNext} className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-neutral-800 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-md active:scale-90">
+                            <button type="button" onClick={handleNext} className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-neutral-800 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-md active:scale-90 z-20">
                                 <ChevronRight className="w-5 h-5" />
                             </button>
                         )}
