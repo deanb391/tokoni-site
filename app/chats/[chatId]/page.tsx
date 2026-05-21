@@ -265,7 +265,7 @@ export default function ChatDetailPage() {
 
   // Scroll to bottom helper
   const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    messagesEndRef.current?.scrollIntoView({ behavior, block: "nearest" });
   };
 
   useEffect(() => {
@@ -1060,9 +1060,13 @@ export default function ChatDetailPage() {
   return (
     <div
       style={{
+        position: "fixed",
+        top: "72px",
+        bottom: 0,
+        left: 0,
+        right: 0,
         display: "flex",
         flexDirection: "column",
-        height: mobile ? "calc(100vh - 116px)" : "calc(100vh - 73px)",
         backgroundColor: "#FFFFFF",
         fontFamily: "var(--font-body), sans-serif",
       }}
@@ -1621,7 +1625,7 @@ export default function ChatDetailPage() {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: "13px", fontWeight: "600", color: "#111", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {selectedFile?.name}
+                      {selectedFile ? truncateText(selectedFile.name, 30) : ""}
                     </div>
                     <div style={{ fontSize: "11.5px", color: "#888", marginTop: "2px" }}>
                       {selectedFile ? (selectedFile.size / (1024 * 1024)).toFixed(2) + " MB" : ""}
