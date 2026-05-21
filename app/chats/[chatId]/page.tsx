@@ -1209,7 +1209,7 @@ export default function ChatDetailPage() {
                       backgroundColor: "transparent",
                       border: "none",
                       outline: "none",
-                      fontSize: "14px",
+                      fontSize: "16px",
                       color: "#111",
                     }}
                   />

@@ -548,7 +548,8 @@ export default function CommentDrawer({
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               placeholder={replyingTo ? "Add a reply..." : "Add a comment..."}
-              className="flex-1 bg-white/5 border border-white/10 focus:border-white/20 focus:bg-white/10 rounded-full px-4 py-2 text-xs text-white focus:outline-none transition-all placeholder-neutral-500"
+              className="flex-1 bg-white/5 border border-white/10 focus:border-white/20 focus:bg-white/10 rounded-full px-4 py-2 text-white focus:outline-none transition-all placeholder-neutral-500"
+              style={{ fontSize: "16px" }}
             />
 
             {/* Submit button */}

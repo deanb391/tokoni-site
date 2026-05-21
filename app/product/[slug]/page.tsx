@@ -7,6 +7,7 @@ import { useUser } from '@/context/UserContext';
 import { getProductById, toggleLikeProduct } from '@/lib/api/products';
 import { useChat } from '@/context/ChatContext';
 import { getVendorById } from '@/lib/api/vendors';
+import { trackProductViewKeywords } from '@/lib/utils/keywordTracker';
 import { fetchReviews, createReview, calculateProductAverageRating } from '@/lib/api/reviews';
 import EditProductModal from '@/components/EditProductModal';
 import ReviewModal from '@/components/ReviewModal';
@@ -122,6 +123,29 @@ const MOCK_PRODUCTS: Record<string, any> = {
     }
 };
 
+// Component that fetches and links to the active sponsorship for a product
+function SponsorshipButton({ productId }: { productId: string }) {
+    const router = useRouter();
+    const [sponsorshipId, setSponsorshipId] = useState<string | null>(null);
+
+    useEffect(() => {
+        fetch(`/api/sponsorships/by-product?productId=${productId}`)
+            .then(r => r.json())
+            .then(d => { if (d.sponsorship?.$id) setSponsorshipId(d.sponsorship.$id); })
+            .catch(() => {});
+    }, [productId]);
+
+    return (
+        <button
+            onClick={() => sponsorshipId && router.push(`/dashboard/sponsorship/${sponsorshipId}`)}
+            style={{ width: '100%', backgroundColor: '#FFF0F2', color: '#B9001B', border: '1.5px solid #FFD7DE', borderRadius: '8px', padding: '0.8rem', fontSize: '14.5px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: sponsorshipId ? 'pointer' : 'default', transition: 'all 0.2s', opacity: sponsorshipId ? 1 : 0.7 }}
+        >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B9001B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            ⚡ View Sponsorship
+        </button>
+    );
+}
+
 export default function ProductDetailScreen() {
     const router = useRouter();
     const params = useParams();
@@ -201,6 +225,7 @@ export default function ProductDetailScreen() {
                 // If it matches a mock ID
                 if (MOCK_PRODUCTS[slug]) {
                     setProduct(MOCK_PRODUCTS[slug]);
+                    trackProductViewKeywords(MOCK_PRODUCTS[slug].name, MOCK_PRODUCTS[slug].description);
                     setVendorInfo({
                         $id: MOCK_PRODUCTS[slug].vendor,
                         businessName: "Studio Audio Gear",
@@ -220,6 +245,7 @@ export default function ProductDetailScreen() {
                         throw new Error("Product not found");
                     }
                     setProduct(fetched);
+                    trackProductViewKeywords(fetched.name, fetched.description);
 
                     // Fetch vendor details
                     if (fetched.vendor && !fetched.vendor.startsWith("mock-vendor-")) {
@@ -625,6 +651,17 @@ export default function ProductDetailScreen() {
                                         <EditIcon />
                                         Edit Product Details
                                     </button>
+                                    {product.isSponsored ? (
+                                        <SponsorshipButton productId={product.$id} />
+                                    ) : (
+                                        <button
+                                            onClick={() => router.push(`/dashboard/product/sponsor?productId=${product.$id}&from=product`)}
+                                            style={{ width: '100%', backgroundColor: '#FFFFFF', color: '#B9001B', border: '1.5px solid #B9001B', borderRadius: '8px', padding: '0.8rem', fontSize: '14.5px', fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        >
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B9001B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                                            Sponsor Listing
+                                        </button>
+                                    )}
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

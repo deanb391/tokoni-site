@@ -10,6 +10,8 @@ import FloatingActionButton from '@/components/FloatingActionButton';
 import { getVendorProducts, getVendorProductsPaginated, getProductById } from '@/lib/api/products';
 import { getVendorPosts } from '@/lib/api/posts';
 import PostCard from '@/components/PostCard';
+import { isVendorPremium } from '@/lib/services/subscriptions.service';
+
 
 // --- Inline SVG Icons ---
 const SearchIcon = ({ color = "#666" }) => (
@@ -389,13 +391,41 @@ export default function VendorDashboardScreen() {
     };
 
     if (loading || (user && vendorLoading && !vendor)) {
+        const skMobile = mounted ? isMobile : false;
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', fontFamily: 'var(--font-body), sans-serif', backgroundColor: '#F9FAFB' }}>
-                <div style={{ width: '40px', height: '40px', border: '3px solid #E5E7EB', borderTop: '3px solid #B9001B', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '1.5rem' }}></div>
-                <p style={{ color: '#555', fontSize: '15px', fontWeight: '500' }}>Loading your premium experience...</p>
-                <style jsx global>{`
-                    @keyframes spin {
-                        to { transform: rotate(360deg); }
+            <div style={{ backgroundColor: '#F9FAFB', minHeight: '100vh', fontFamily: 'var(--font-body), sans-serif' }}>
+                {/* Skeleton Hero */}
+                <section style={{ backgroundColor: '#FFFFFF', borderBottom: '1px solid #EDEDED' }}>
+                    <div style={{ width: '100%', height: skMobile ? '160px' : '240px', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: skMobile ? '0 1.5rem 2rem' : '0 3rem 2rem' }}>
+                        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', marginTop: '-50px' }}>
+                            <div style={{ width: skMobile ? '100px' : '130px', height: skMobile ? '100px' : '130px', borderRadius: '50%', backgroundColor: '#E5E7EB', border: '5px solid #fff', flexShrink: 0, animation: 'shimmer 1.5s infinite' }} />
+                            <div style={{ flex: 1, marginTop: '60px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <div style={{ height: '22px', width: '55%', borderRadius: '8px', backgroundColor: '#E5E7EB', animation: 'shimmer 1.5s infinite' }} />
+                                <div style={{ height: '14px', width: '35%', borderRadius: '6px', backgroundColor: '#F3F4F6', animation: 'shimmer 1.5s infinite' }} />
+                                <div style={{ height: '14px', width: '70%', borderRadius: '6px', backgroundColor: '#F3F4F6', animation: 'shimmer 1.5s infinite' }} />
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                {/* Skeleton product grid */}
+                <main style={{ maxWidth: '1200px', margin: '0 auto', padding: skMobile ? '2rem 1.5rem' : '3rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} style={{ borderRadius: '14px', overflow: 'hidden', backgroundColor: '#FFF', border: '1px solid #EDEDED' }}>
+                                <div style={{ height: '180px', backgroundColor: '#F3F4F6', animation: 'shimmer 1.5s infinite' }} />
+                                <div style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <div style={{ height: '14px', width: '70%', borderRadius: '6px', backgroundColor: '#E5E7EB', animation: 'shimmer 1.5s infinite' }} />
+                                    <div style={{ height: '12px', width: '40%', borderRadius: '6px', backgroundColor: '#F3F4F6', animation: 'shimmer 1.5s infinite' }} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </main>
+                <style>{`
+                    @keyframes shimmer {
+                        0% { background-position: 200% 0; }
+                        100% { background-position: -200% 0; }
                     }
                 `}</style>
             </div>
@@ -480,6 +510,32 @@ export default function VendorDashboardScreen() {
                                     <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', padding: '3px 8px', borderRadius: '20px', backgroundColor: vendor.status === 'approved' ? '#EBFDF5' : '#FEF3C7', color: vendor.status === 'approved' ? '#059669' : '#D97706', letterSpacing: '0.5px' }}>
                                         {vendor.status || 'Pending Verification'}
                                     </span>
+                                    {/* Plan Badge */}
+                                    {(() => {
+                                        const isPremium = isVendorPremium(vendor);
+                                        return (
+                                            <button
+                                                onClick={() => router.push('/dashboard/subscription')}
+                                                style={{
+                                                    fontSize: '11px',
+                                                    fontWeight: '800',
+                                                    textTransform: 'uppercase',
+                                                    padding: '3px 10px',
+                                                    borderRadius: '20px',
+                                                    letterSpacing: '0.5px',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    background: isPremium
+                                                        ? 'linear-gradient(135deg, #B9001B 0%, #ff4d6d 100%)'
+                                                        : '#F3F4F6',
+                                                    color: isPremium ? '#FFD700' : '#6B7280',
+                                                    boxShadow: isPremium ? '0 2px 8px rgba(185,0,27,0.25)' : 'none',
+                                                }}
+                                            >
+                                                {isPremium ? '✦ Premium' : 'Free Plan'}
+                                            </button>
+                                        );
+                                    })()}
                                 </div>
 
                                 {vendor.tagline && (
@@ -539,6 +595,58 @@ export default function VendorDashboardScreen() {
 
                     </div>
 
+                    {/* Quick Actions Banner */}
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                        <button
+                            onClick={() => router.push('/dashboard/subscription')}
+                            style={{
+                                flex: 1, minWidth: '200px',
+                                background: isVendorPremium(vendor)
+                                    ? 'linear-gradient(135deg, #B9001B, #FF4D6D)'
+                                    : 'linear-gradient(135deg, #1F2937, #374151)',
+                                color: '#FFF',
+                                border: 'none',
+                                borderRadius: '14px',
+                                padding: '1rem 1.5rem',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+                                transition: 'transform 0.15s',
+                            }}
+                            onMouseOver={e => (e.currentTarget.style.transform = 'scale(1.02)')}
+                            onMouseOut={e => (e.currentTarget.style.transform = 'scale(1)')}
+                        >
+                            <div style={{ fontSize: '20px', marginBottom: '6px' }}>{isVendorPremium(vendor) ? '👑' : '🔓'}</div>
+                            <p style={{ fontSize: '13px', fontWeight: '800', color: isVendorPremium(vendor) ? '#FFD700' : '#E5E7EB', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                {isVendorPremium(vendor) ? 'Premium Plan' : 'Free Plan'}
+                            </p>
+                            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', margin: 0 }}>
+                                {isVendorPremium(vendor) ? 'Manage subscription →' : 'Upgrade to unlock more →'}
+                            </p>
+                        </button>
+                        <button
+                            onClick={() => router.push('/dashboard/product/sponsor')}
+                            style={{
+                                flex: 1, minWidth: '200px',
+                                background: 'linear-gradient(135deg, #7C3AED, #A78BFA)',
+                                color: '#FFF',
+                                border: 'none',
+                                borderRadius: '14px',
+                                padding: '1rem 1.5rem',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                boxShadow: '0 4px 14px rgba(124,58,237,0.2)',
+                                transition: 'transform 0.15s',
+                            }}
+                            onMouseOver={e => (e.currentTarget.style.transform = 'scale(1.02)')}
+                            onMouseOut={e => (e.currentTarget.style.transform = 'scale(1)')}
+                        >
+                            <div style={{ fontSize: '20px', marginBottom: '6px' }}>⚡</div>
+                            <p style={{ fontSize: '13px', fontWeight: '800', color: '#E0D9FF', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sponsored Listings</p>
+                            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', margin: 0 }}>Boost product visibility →</p>
+                        </button>
+                    </div>
+
                     {/* Tabs */}
                     <div style={{ display: 'flex', gap: '2rem', marginTop: '2.5rem', overflowX: 'auto', borderBottom: '2px solid transparent', paddingBottom: '1px' }}>
                         {tabs.map((tab) => {
@@ -584,8 +692,16 @@ export default function VendorDashboardScreen() {
 
                         {/* Product Grid */}
                         {productsLoading ? (
-                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem', width: '100%' }}>
-                                <div style={{ width: '30px', height: '30px', border: '3px solid #E5E7EB', borderTop: '3px solid #B9001B', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
+                                {Array.from({ length: 6 }).map((_, i) => (
+                                    <div key={i} style={{ borderRadius: '14px', overflow: 'hidden', backgroundColor: '#FFF', border: '1px solid #EDEDED', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                                        <div style={{ height: '160px', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                                        <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            <div style={{ height: '13px', width: '70%', borderRadius: '6px', background: 'linear-gradient(90deg, #E5E7EB 25%, #D1D5DB 50%, #E5E7EB 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                                            <div style={{ height: '11px', width: '45%', borderRadius: '6px', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         ) : products.length === 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EDEDED', textAlign: 'center', width: '100%', boxSizing: 'border-box' }}>
@@ -701,8 +817,31 @@ export default function VendorDashboardScreen() {
                         </div>
 
                         {postsLoading ? (
-                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem', width: '100%' }}>
-                                <div style={{ width: '30px', height: '30px', border: '3px solid #E5E7EB', borderTop: '3px solid #B9001B', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', maxWidth: '540px', margin: '0 auto' }}>
+                                {Array.from({ length: 3 }).map((_, i) => (
+                                    <div key={i} style={{ backgroundColor: '#FFF', borderRadius: '16px', border: '1px solid #EDEDED', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                                        {/* Header skeleton */}
+                                        <div style={{ padding: '14px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #F9FAFB' }}>
+                                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', flexShrink: 0 }} />
+                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                <div style={{ height: '12px', width: '40%', borderRadius: '4px', background: 'linear-gradient(90deg, #E5E7EB 25%, #D1D5DB 50%, #E5E7EB 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                                                <div style={{ height: '10px', width: '25%', borderRadius: '4px', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                                            </div>
+                                        </div>
+                                        {/* Image skeleton */}
+                                        <div style={{ width: '100%', aspectRatio: '1/1', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                                        {/* Actions skeleton */}
+                                        <div style={{ padding: '14px', display: 'flex', gap: '16px' }}>
+                                            {[1, 2, 3].map(j => <div key={j} style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#F3F4F6', animation: 'shimmer 1.5s infinite' }} />)}
+                                        </div>
+                                        {/* Text skeleton */}
+                                        <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            <div style={{ height: '11px', width: '30%', borderRadius: '4px', background: '#F3F4F6', animation: 'shimmer 1.5s infinite' }} />
+                                            <div style={{ height: '13px', width: '80%', borderRadius: '4px', background: '#E5E7EB', animation: 'shimmer 1.5s infinite' }} />
+                                            <div style={{ height: '13px', width: '60%', borderRadius: '4px', background: '#F3F4F6', animation: 'shimmer 1.5s infinite' }} />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         ) : posts.length === 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EDEDED', textAlign: 'center', width: '100%', boxSizing: 'border-box' }}>
@@ -1074,6 +1213,16 @@ export default function VendorDashboardScreen() {
                     setProducts((prev) => prev.filter((p) => p.$id !== selectedProductToEdit?.$id));
                 }}
             />
+
+            <style>{`
+                @keyframes shimmer {
+                    0% { background-position: 200% 0; }
+                    100% { background-position: -200% 0; }
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 }

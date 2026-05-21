@@ -18,6 +18,7 @@ export type ProductDraft = {
   available: boolean;
   likes?: number;
   likedBy?: string | string[];
+  isSponsored?: boolean;
 };
 
 export type Product = ProductDraft & {
@@ -25,6 +26,7 @@ export type Product = ProductDraft & {
   vendor: string;
   likes: number;
   likedBy: string[];
+  isSponsored: boolean;
   $createdAt: string;
   $updatedAt: string;
 };
@@ -58,6 +60,7 @@ function mapProduct(doc: any): Product {
     vendor: doc.vendor || "",
     likes: typeof doc.likes === "number" ? doc.likes : parseInt(doc.likes || "0", 10),
     likedBy: parsedLikedBy,
+    isSponsored: doc.isSponsored === true,
     $createdAt: doc.$createdAt,
     $updatedAt: doc.$updatedAt,
   };

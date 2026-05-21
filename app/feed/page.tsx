@@ -3,7 +3,9 @@
 import React, { useEffect, useRef } from "react";
 import { useFeed } from "@/context/FeedContext";
 import { useUser } from "@/context/UserContext";
+import { useRouter } from "next/navigation";
 import PostCard from "@/components/PostCard";
+import ExpandedPostContainer from "@/components/ExpandedPostContainer";
 import { Loader2, Compass, Sparkles } from "lucide-react";
 
 // Native IntersectionObserver wrapper to notify the context when a card is visible
@@ -42,6 +44,7 @@ function VisibilityTracker({
 
 export default function FeedScreen() {
   const { user } = useUser();
+  const router = useRouter();
   const {
     posts,
     loading,
@@ -150,6 +153,8 @@ export default function FeedScreen() {
           </div>
         )}
       </div>
+
+      <ExpandedPostContainer />
     </main>
   );
 }

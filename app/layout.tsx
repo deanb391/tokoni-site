@@ -7,7 +7,6 @@ import { ChatProvider } from "@/context/ChatContext";
 import { FeedProvider } from "@/context/FeedContext";
 import { HomeFeedProvider } from "@/context/HomeFeedContext";
 import { ProductsProvider } from "@/context/ProductsContext";
-import ExpandedPostContainer from "@/components/ExpandedPostContainer";
 
 const headingFont = Outfit({
   variable: "--font-heading",
@@ -43,7 +42,6 @@ export default function RootLayout({
               <HomeFeedProvider>
                 <ProductsProvider>
                   <MainLayout>{children}</MainLayout>
-                  <ExpandedPostContainer />
                 </ProductsProvider>
               </HomeFeedProvider>
             </FeedProvider>

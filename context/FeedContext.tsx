@@ -8,6 +8,7 @@ import { getGlobalFeedPosts, toggleLikePost as toggleLikePostApi } from "@/lib/a
 import { getProductById } from "@/lib/api/products";
 import { getVendorById } from "@/lib/api/vendors";
 import { useUser } from "@/context/UserContext";
+import { getTopKeywords } from "@/lib/utils/keywordTracker";
 
 interface FeedContextType {
   posts: Post[];
@@ -24,6 +25,7 @@ interface FeedContextType {
   toggleSaveCount: (postId: string, isSaved: boolean) => void;
   refreshFeed: () => Promise<void>;
   fetchNextBatch: (limit?: number) => Promise<void>;
+  initializeReels: (postId: string) => Promise<void>;
 }
 
 const FeedContext = createContext<FeedContextType | undefined>(undefined);
@@ -33,7 +35,7 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [offset, setOffset] = useState(0);
   const [highestViewedIndex, setHighestViewedIndexState] = useState(-1);
   const [expandedPostIndex, setExpandedPostIndex] = useState<number | null>(null);
 
@@ -45,12 +47,14 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
   const highestViewedRef = useRef(-1);
   const loadingRef = useRef(false);
   const hasMoreRef = useRef(true);
+  const offsetRef = useRef(0);
 
   // Keep refs up-to-date for background prefetching closure safety
   useEffect(() => { postsRef.current = posts; }, [posts]);
   useEffect(() => { highestViewedRef.current = highestViewedIndex; }, [highestViewedIndex]);
   useEffect(() => { loadingRef.current = loading; }, [loading]);
   useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
+  useEffect(() => { offsetRef.current = offset; }, [offset]);
 
   // Update highest viewed index
   const setHighestViewedIndex = (index: number) => {
@@ -113,25 +117,29 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Fetch a batch of posts
-  const fetchNextBatch = async (limit = 5) => {
+  const fetchNextBatch = async (limit = 10) => {
     if (loadingRef.current || !hasMoreRef.current) return;
     setLoading(true);
 
     try {
-      const res = await getGlobalFeedPosts(limit, cursor);
+      const keywords = getTopKeywords();
+      const userId = user?.$id || "";
+      const url = `/api/posts/feed?type=feed&limit=${limit}&offset=${offsetRef.current}&keywords=${encodeURIComponent(keywords.join(","))}&userId=${encodeURIComponent(userId)}`;
       
-      setPosts(prev => {
-        const existingIds = new Set(prev.map(p => p.$id));
-        const filteredNew = res.posts.filter(p => !existingIds.has(p.$id));
-        const combined = [...prev, ...filteredNew];
-        
-        // Asynchronously resolve vendor/product metadata for the combined list
-        resolveMetadataForPosts(filteredNew);
-        return combined;
-      });
+      const res = await fetch(url).then(r => r.json());
+      if (res && res.success) {
+        const fetchedPosts: Post[] = res.posts || [];
+        setPosts(prev => {
+          const existingIds = new Set(prev.map(p => p.$id));
+          const filteredNew = fetchedPosts.filter(p => !existingIds.has(p.$id));
+          const combined = [...prev, ...filteredNew];
+          resolveMetadataForPosts(filteredNew);
+          return combined;
+        });
 
-      setCursor(res.nextCursor);
-      setHasMore(res.hasMore);
+        setOffset(prev => prev + fetchedPosts.length);
+        setHasMore(res.hasMore);
+      }
     } catch (err) {
       console.error("Error fetching feed batch:", err);
     } finally {
@@ -139,17 +147,30 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Initialize feed with first 10 posts
+  // Initialize feed with first 2 posts, then queue 10 more
   const refreshFeed = async () => {
     setLoading(true);
     try {
-      const res = await getGlobalFeedPosts(10);
-      setPosts(res.posts);
-      setCursor(res.nextCursor);
-      setHasMore(res.hasMore);
+      const keywords = getTopKeywords();
+      const userId = user?.$id || "";
+
+      // 1. Fetch first 2 posts
+      const url1 = `/api/posts/feed?type=feed&limit=2&offset=0&keywords=${encodeURIComponent(keywords.join(","))}&userId=${encodeURIComponent(userId)}`;
+      const res1 = await fetch(url1).then(r => r.json());
+      const initialPosts: Post[] = res1 && res1.success ? res1.posts : [];
+
+      // 2. Queue next 10 posts
+      const url2 = `/api/posts/feed?type=feed&limit=10&offset=${initialPosts.length}&keywords=${encodeURIComponent(keywords.join(","))}&userId=${encodeURIComponent(userId)}`;
+      const res2 = await fetch(url2).then(r => r.json());
+      const queuedPosts: Post[] = res2 && res2.success ? res2.posts : [];
+
+      const combined = [...initialPosts, ...queuedPosts];
+      setPosts(combined);
+      setOffset(combined.length);
+      setHasMore(res2 && res2.success ? res2.hasMore : false);
       setHighestViewedIndexState(-1);
       
-      resolveMetadataForPosts(res.posts);
+      resolveMetadataForPosts(combined);
     } catch (err) {
       console.error("Error refreshing feed:", err);
     } finally {
@@ -157,20 +178,58 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const initializeReels = async (postId: string) => {
+    setLoading(true);
+    try {
+      // 1. Fetch the target post details
+      const resPost = await fetch(`/api/posts/list?ids=${encodeURIComponent(postId)}`).then(r => r.json());
+      const targetPost = resPost.posts?.[0];
+      if (!targetPost) return;
+
+      // Resolve metadata for target post
+      resolveMetadataForPosts([targetPost]);
+
+      // 2. Fetch more posts using Reels algorithm (exclude current postId if possible)
+      const keywords = getTopKeywords();
+      const userId = user?.$id || "";
+      const url = `/api/posts/feed?type=reels&limit=10&offset=0&keywords=${encodeURIComponent(keywords.join(","))}&userId=${encodeURIComponent(userId)}`;
+      const resFeed = await fetch(url).then(r => r.json());
+      
+      let feedPosts = resFeed.success ? resFeed.posts : [];
+      // Filter out the target post if it is returned
+      feedPosts = feedPosts.filter((p: Post) => p.$id !== targetPost.$id);
+
+      const combined = [targetPost, ...feedPosts];
+      setPosts(combined);
+      setOffset(combined.length);
+      setHasMore(resFeed.hasMore || false);
+      setExpandedPostIndex(0);
+      setHighestViewedIndexState(0);
+      
+      resolveMetadataForPosts(feedPosts);
+    } catch (err) {
+      console.error("Error initializing reels queue:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Initial load
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.pathname.includes("/reels/")) {
+      // Skip automatic refreshFeed on reels route since the reels page will call initializeReels
+      return;
+    }
     refreshFeed();
-  }, []);
+  }, [user?.$id]); // reload if user changes
 
-  // Prefetch loop: runs whenever highestViewedIndex or posts.length changes
-  // Buffer size: posts.length - (highestViewedIndex + 1)
-  // We keep pre-fetching in batches of 5 until bufferSize >= 20 or no more posts are available
+  // Prefetch loop: runs when highestViewedIndex or posts.length changes
+  // Threshold: When 8 of the 10 queued items (posts.length - 4) have been rendered/viewed
   useEffect(() => {
-    if (loading || !hasMore) return;
+    if (loading || !hasMore || posts.length === 0) return;
 
-    const bufferSize = posts.length - (highestViewedIndex + 1);
-    if (bufferSize < 20) {
-      fetchNextBatch(5);
+    if (highestViewedIndex >= posts.length - 4) {
+      fetchNextBatch(10);
     }
   }, [posts.length, highestViewedIndex, loading, hasMore]);
 
@@ -242,6 +301,7 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
         toggleSaveCount,
         refreshFeed,
         fetchNextBatch,
+        initializeReels,
       }}
     >
       {children}

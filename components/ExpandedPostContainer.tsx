@@ -5,11 +5,16 @@ import { useFeed } from "@/context/FeedContext";
 import { useUser } from "@/context/UserContext";
 import { X, Heart, MessageCircle, Send, Bookmark, ShoppingBag, ChevronUp, ChevronDown, Loader2, Play, Pause } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useParams } from "next/navigation";
 import CommentDrawer from "@/components/CommentDrawer";
 import { toggleFollowVendor, toggleSavePost } from "@/lib/api/users";
+import { trackPostLikeKeywords, trackPostTimeSpentKeywords } from "@/lib/utils/keywordTracker";
 
 export default function ExpandedPostContainer() {
   const { user, setUser } = useUser();
+  const router = useRouter();
+  const params = useParams();
+  const routePostId = params?.postId as string;
   const [followingLoading, setFollowingLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
 
@@ -60,7 +65,8 @@ export default function ExpandedPostContainer() {
     toggleLike,
     toggleSaveCount,
     incrementCommentCount,
-    fetchNextBatch
+    fetchNextBatch,
+    initializeReels
   } = useFeed();
 
   const [activeMediaIndexes, setActiveMediaIndexes] = useState<Record<string, number>>({});
@@ -69,6 +75,7 @@ export default function ExpandedPostContainer() {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const videoRefs = useRef<Record<number, HTMLVideoElement | null>>({});
+  const trackingRef = useRef<{ postId: string; caption: string; startTime: number } | null>(null);
 
   const [activeFeedback, setActiveFeedback] = useState<{ postId: string; type: "play" | "pause" } | null>(null);
   const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -113,13 +120,55 @@ export default function ExpandedPostContainer() {
     });
   }, [expandedPostIndex]);
 
-  // Ensure active index is synced to highest viewed index for prefetching
+  // Ensure active index is synced to highest viewed index, increment views, and track time spent
   useEffect(() => {
-    if (expandedPostIndex !== null) {
+    // Process previous tracking if it exists
+    if (trackingRef.current) {
+      const duration = (Date.now() - trackingRef.current.startTime) / 1000;
+      if (duration >= 3) {
+        trackPostTimeSpentKeywords(trackingRef.current.caption, duration);
+      }
+      trackingRef.current = null;
+    }
+
+    if (expandedPostIndex !== null && posts[expandedPostIndex]) {
+      const activePost = posts[expandedPostIndex];
       setHighestViewedIndex(expandedPostIndex);
       setCaptionOverlayPostId(null);
+
+      // Start new tracking
+      trackingRef.current = {
+        postId: activePost.$id,
+        caption: activePost.caption,
+        startTime: Date.now()
+      };
+
+      // Increment view count via API
+      fetch("/api/posts/view", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: activePost.$id })
+      }).catch(err => console.error("Error logging view:", err));
     }
-  }, [expandedPostIndex]);
+
+    // Cleanup: save time spent on unmount or before next change
+    return () => {
+      if (trackingRef.current) {
+        const duration = (Date.now() - trackingRef.current.startTime) / 1000;
+        if (duration >= 3) {
+          trackPostTimeSpentKeywords(trackingRef.current.caption, duration);
+        }
+        trackingRef.current = null;
+      }
+    };
+  }, [expandedPostIndex, posts]);
+
+  // Auto-initialize reels queue if we are on a direct reels route
+  useEffect(() => {
+    if (routePostId && expandedPostIndex === null && !loading) {
+      initializeReels(routePostId);
+    }
+  }, [routePostId, expandedPostIndex, loading, initializeReels]);
 
   // Handle keyboard events (Up / Down / Esc)
   useEffect(() => {
@@ -180,7 +229,12 @@ export default function ExpandedPostContainer() {
 
   if (expandedPostIndex === null) return null;
 
-  const handleClose = () => setExpandedPostIndex(null);
+  const handleClose = () => {
+    setExpandedPostIndex(null);
+    if (typeof window !== "undefined" && window.location.pathname.includes("/reels/")) {
+      router.push("/feed");
+    }
+  };
 
   const handleNextMedia = (postId: string, totalMedia: number) => {
     const currentIdx = activeMediaIndexes[postId] || 0;
@@ -257,7 +311,8 @@ export default function ExpandedPostContainer() {
                   <>
                     <video
                       ref={el => { videoRefs.current[idx] = el; }}
-                      src={post.media[0]}
+                      src={idx <= expandedPostIndex + 1 ? post.media[0] : undefined}
+                      preload={idx === expandedPostIndex || idx === expandedPostIndex + 1 ? "auto" : "none"}
                       autoPlay={idx === expandedPostIndex}
                       loop
                       playsInline
@@ -292,7 +347,8 @@ export default function ExpandedPostContainer() {
                 ) : (
                   <div className="relative w-full h-full flex items-center justify-center">
                     <img
-                      src={post.media[activeIdx]}
+                      src={idx <= expandedPostIndex + 1 ? post.media[activeIdx] : undefined}
+                      loading={idx === expandedPostIndex || idx === expandedPostIndex + 1 ? "eager" : "lazy"}
                       alt="Reel Slide"
                       className="w-full h-full object-contain"
                     />
@@ -447,49 +503,15 @@ export default function ExpandedPostContainer() {
                   </div>
                 )}
 
-                {/* Action Sidebar (Right overlay) */}
-                <div className="absolute right-3 bottom-1/12 flex flex-col gap-5 items-center z-20 text-white">
-                  {/* Like Button */}
-                  <button
-                    onClick={() => toggleLike(post.$id)}
-                    className="flex flex-col items-center gap-1.2 group cursor-pointer"
-                  >
-                    <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-xs group-hover:bg-[#B9001B]/95 border border-white/10 transition-all group-active:scale-125">
-                      <Heart className={`w-5 h-5 ${isLiked ? "fill-red-600 text-red-600" : "text-white"}`} />
-                    </div>
-                    <span className="text-[10px] font-extrabold tracking-wide">{post.likes}</span>
-                  </button>
-
-                  {/* Comments */}
-                  <button
-                    onClick={() => setCommentDrawerPostId(post.$id)}
-                    className="flex flex-col items-center gap-1.5 group cursor-pointer"
-                  >
-                    <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-xs group-hover:bg-white/20 border border-white/10 transition-all">
-                      <MessageCircle className="w-5 h-5 text-white" />
-                    </div>
-                    <span className="text-[10px] font-extrabold tracking-wide">{post?.comments || 0}</span>
-                  </button>
-
-                  {/* Share */}
-                  <button className="flex flex-col items-center gap-1.5 group">
-                    <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-xs group-hover:bg-white/20 border border-white/10 transition-all">
-                      <Send className="w-5 h-5 text-white" />
-                    </div>
-                  </button>
-
-                  {/* Bookmark */}
-                  <button
-                    onClick={() => handleSaveToggle(post.$id)}
-                    disabled={saveLoading}
-                    className="flex flex-col items-center gap-1.5 group cursor-pointer"
-                  >
-                    <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-xs group-hover:bg-white/20 border border-white/10 transition-all">
-                      <Bookmark className={`w-5 h-5 ${user?.savedPosts?.includes(post.$id) ? "fill-white text-white" : "text-white"}`} />
-                    </div>
-                    <span className="text-[10px] font-extrabold tracking-wide">{post?.saved || 0}</span>
-                  </button>
-                </div>
+                <ExpandedActionSidebar
+                  post={post}
+                  user={user}
+                  isLiked={isLiked}
+                  saveLoading={saveLoading}
+                  toggleLike={toggleLike}
+                  setCommentDrawerPostId={setCommentDrawerPostId}
+                  handleSaveToggle={handleSaveToggle}
+                />
               </div>
             </div>
           );
@@ -547,5 +569,202 @@ export default function ExpandedPostContainer() {
         />
       )}
     </div>
+  );
+}
+
+interface ExpandedActionSidebarProps {
+  post: any;
+  user: any;
+  isLiked: boolean;
+  saveLoading: boolean;
+  toggleLike: (postId: string) => void;
+  setCommentDrawerPostId: (postId: string | null) => void;
+  handleSaveToggle: (postId: string) => void;
+}
+
+function ExpandedActionSidebar({
+  post,
+  user,
+  isLiked,
+  saveLoading,
+  toggleLike,
+  setCommentDrawerPostId,
+  handleSaveToggle,
+}: ExpandedActionSidebarProps) {
+  const [likeAnimating, setLikeAnimating] = useState(false);
+  const [commentAnimating, setCommentAnimating] = useState(false);
+  const [shareAnimating, setShareAnimating] = useState(false);
+  const [saveAnimating, setSaveAnimating] = useState(false);
+  const [heartParticles, setHeartParticles] = useState<{ id: number; x: number; y: number }[]>([]);
+  
+  const likeButtonRef = useRef<HTMLButtonElement>(null);
+  const particleIdRef = useRef(0);
+
+  const spawnHeartParticles = () => {
+    if (!likeButtonRef.current) return;
+    const rect = likeButtonRef.current.getBoundingClientRect();
+    const container = likeButtonRef.current.closest(".snap-start");
+    if (!container) return;
+    const containerRect = container.getBoundingClientRect();
+    const x = rect.left - containerRect.left + rect.width / 2;
+    const y = rect.top - containerRect.top;
+
+    const newParticles = Array.from({ length: 5 }, (_, i) => ({
+      id: particleIdRef.current++,
+      x: x + (Math.random() - 0.5) * 40,
+      y,
+    }));
+    setHeartParticles((prev) => [...prev, ...newParticles]);
+    setTimeout(() => {
+      setHeartParticles((prev) => prev.filter((p) => !newParticles.find((n) => n.id === p.id)));
+    }, 1000);
+  };
+
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLikeAnimating(true);
+    setTimeout(() => setLikeAnimating(false), 400);
+    if (!isLiked) {
+      spawnHeartParticles();
+      trackPostLikeKeywords(post.caption);
+    }
+    toggleLike(post.$id);
+  };
+
+  const handleCommentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCommentAnimating(true);
+    setTimeout(() => setCommentAnimating(false), 350);
+    setCommentDrawerPostId(post.$id);
+  };
+
+  const handleShareClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShareAnimating(true);
+    setTimeout(() => setShareAnimating(false), 350);
+    // Call share API route
+    fetch("/api/posts/share", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId: post.$id })
+    }).catch(err => console.error("Error logging share:", err));
+  };
+
+  const handleSaveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSaveAnimating(true);
+    setTimeout(() => setSaveAnimating(false), 350);
+    handleSaveToggle(post.$id);
+  };
+
+  const isSaved = user?.savedPosts?.includes(post.$id) || false;
+
+  return (
+    <>
+      {/* Floating heart particles */}
+      {heartParticles.map((p) => (
+        <div
+          key={p.id}
+          style={{
+            position: "absolute",
+            left: p.x,
+            top: p.y,
+            pointerEvents: "none",
+            zIndex: 40,
+            animation: "float-heart-expanded 1s ease-out forwards",
+            fontSize: "24px",
+            transform: "translateX(-50%)",
+          }}
+        >
+          ❤️
+        </div>
+      ))}
+
+      <div className="absolute right-3 bottom-1/12 flex flex-col gap-5 items-center z-20 text-white">
+        {/* Like Button */}
+        <button
+          ref={likeButtonRef}
+          onClick={handleLike}
+          style={{
+            transform: likeAnimating ? "scale(1.35)" : "scale(1)",
+            transition: "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
+          className="flex flex-col items-center gap-1.2 group"
+        >
+          <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-xs group-hover:bg-[#B9001B]/95 border border-white/10 transition-all">
+            <Heart className={`w-5 h-5 ${isLiked ? "fill-red-600 text-red-600" : "text-white"}`} />
+          </div>
+          <span className="text-[10px] font-extrabold tracking-wide">{post.likes}</span>
+        </button>
+
+        {/* Comments */}
+        <button
+          onClick={handleCommentClick}
+          style={{
+            transform: commentAnimating ? "scale(1.25) rotate(-10deg)" : "scale(1) rotate(0deg)",
+            transition: "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
+          className="flex flex-col items-center gap-1.5 group"
+        >
+          <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-xs group-hover:bg-white/20 border border-white/10 transition-all">
+            <MessageCircle className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-[10px] font-extrabold tracking-wide">{post?.comments || 0}</span>
+        </button>
+
+        {/* Share */}
+        <button
+          onClick={handleShareClick}
+          style={{
+            transform: shareAnimating ? "scale(1.2) translateX(4px)" : "scale(1) translateX(0)",
+            transition: "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
+          className="flex flex-col items-center gap-1.5 group"
+        >
+          <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-xs group-hover:bg-white/20 border border-white/10 transition-all">
+            <Send className="w-5 h-5 text-white" />
+          </div>
+        </button>
+
+        {/* Bookmark */}
+        <button
+          onClick={handleSaveClick}
+          disabled={saveLoading}
+          style={{
+            transform: saveAnimating ? "scale(1.3)" : "scale(1)",
+            transition: "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
+          className="flex flex-col items-center gap-1.5 group"
+        >
+          <div className="bg-black/40 p-2.5 rounded-full backdrop-blur-xs group-hover:bg-white/20 border border-white/10 transition-all">
+            <Bookmark className={`w-5 h-5 ${isSaved ? "fill-white text-white" : "text-white"}`} />
+          </div>
+          <span className="text-[10px] font-extrabold tracking-wide">{post?.saved || 0}</span>
+        </button>
+      </div>
+
+      <style>{`
+        @keyframes float-heart-expanded {
+          0% { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); }
+          100% { opacity: 0; transform: translateX(-50%) scale(1.4) translateY(-80px); }
+        }
+      `}</style>
+    </>
   );
 }

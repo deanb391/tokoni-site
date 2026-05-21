@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getGlobalProducts } from '@/lib/api/products';
 import { Product } from '@/lib/services/products.service';
+import { trackSearchKeywords } from '@/lib/utils/keywordTracker';
 
 interface SectionState {
   products: Product[];
@@ -118,6 +119,9 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
+      if (searchQuery) {
+        trackSearchKeywords(searchQuery);
+      }
       initAllSections(searchQuery);
     }, 450);
 

@@ -711,9 +711,31 @@ export default function VendorOnboardingFlow() {
                             <h1 style={{ fontSize: '32px', fontWeight: '700', color: '#111', margin: '0 0 1rem 0', lineHeight: '1.2' }}>
                                 Your vendor account is<br />ready
                             </h1>
-                            <p style={{ fontSize: '15px', color: '#666', margin: '0 0 2.5rem 0', lineHeight: '1.6' }}>
+                            <p style={{ fontSize: '15px', color: '#666', margin: '0 0 2rem 0', lineHeight: '1.6' }}>
                                 Welcome to Tokoni. You can now start<br />adding products, managing your store,<br />and connecting with customers.
                             </p>
+
+                            {/* Premium Trial Banner */}
+                            <div style={{
+                                background: 'linear-gradient(135deg, #B9001B 0%, #ff4d6d 100%)',
+                                borderRadius: '14px',
+                                padding: '1.25rem 1.5rem',
+                                marginBottom: '1.5rem',
+                                textAlign: 'left',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}>
+                                <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                                <div style={{ position: 'absolute', bottom: '-30px', left: '60%', width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.05)' }} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '18px' }}>🎁</span>
+                                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#FFD700', textTransform: 'uppercase', letterSpacing: '1px' }}>Founding Vendor Gift</span>
+                                </div>
+                                <p style={{ fontSize: '15px', fontWeight: '700', color: '#FFFFFF', margin: '0 0 4px 0' }}>2 Months Premium — Free</p>
+                                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: '1.5' }}>
+                                    Unlimited products & posts, 50% off all sponsorships. No card needed.
+                                </p>
+                            </div>
 
                             <button
                                 onClick={() => router.push('/dashboard')}

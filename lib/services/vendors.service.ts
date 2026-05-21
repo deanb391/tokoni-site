@@ -17,6 +17,9 @@ export type VendorDraft = {
   state: string;
   address: string;
   status?: string;
+  plan?: string;
+  trialEndsAt?: string;
+  planEndsAt?: string;
 };
 
 export type Vendor = VendorDraft & {
@@ -25,6 +28,9 @@ export type Vendor = VendorDraft & {
   $createdAt: string;
   $updatedAt: string;
   followersCount?: number;
+  plan?: string;
+  trialEndsAt?: string;
+  planEndsAt?: string;
 };
 
 function mapVendor(doc: any): Vendor {
@@ -42,6 +48,9 @@ function mapVendor(doc: any): Vendor {
     address: doc.address || "",
     status: doc.status || "pending",
     users: doc.users || "",
+    plan: doc.plan || "free",
+    trialEndsAt: doc.trialEndsAt || undefined,
+    planEndsAt: doc.planEndsAt || undefined,
     $createdAt: doc.$createdAt,
     $updatedAt: doc.$updatedAt,
   };
@@ -51,14 +60,19 @@ export async function createVendorService(
   draft: VendorDraft,
   user: string
 ): Promise<Vendor> {
-  const now = new Date().toISOString();
+  const now = new Date();
+  const trialEnd = new Date(now);
+  trialEnd.setMonth(trialEnd.getMonth() + 2); // 2-month premium trial
 
   const payload = {
     ...draft,
     users: user,
     status: "pending",
-    $createdAt: now,
-    $updatedAt: now,
+    plan: "premium",
+    trialEndsAt: trialEnd.toISOString(),
+    planEndsAt: null,
+    $createdAt: now.toISOString(),
+    $updatedAt: now.toISOString(),
   };
 
   const doc = await databases.createDocument(

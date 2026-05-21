@@ -5,6 +5,7 @@ import { getGlobalProducts } from '@/lib/api/products';
 import { getGlobalFeedPosts } from '@/lib/api/posts';
 import { Post } from '@/lib/services/posts.service';
 import { Product } from '@/lib/services/products.service';
+import { trackSearchKeywords } from '@/lib/utils/keywordTracker';
 
 export type StreamItem = 
   | { type: 'product'; data: Product }
@@ -104,6 +105,9 @@ export function HomeFeedProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
+      if (searchQuery) {
+        trackSearchKeywords(searchQuery);
+      }
       fetchInitialData(searchQuery);
     }, 400);
 

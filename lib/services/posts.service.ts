@@ -12,6 +12,8 @@ export type PostDraft = {
   taggedProducts: string[];
   likes?: number;
   likedBy?: string | string[];
+  views?: number;
+  shares?: number;
 };
 
 export type Post = {
@@ -25,6 +27,8 @@ export type Post = {
   likedBy: string[];
   comments: number;
   saved: number;
+  views: number;
+  shares: number;
   $createdAt: string;
   $updatedAt: string;
 };
@@ -80,6 +84,8 @@ function mapPost(doc: any): Post {
     likedBy: parsedLikedBy,
     comments: typeof doc.comments === "number" ? doc.comments : parseInt(doc.comments || "0", 10),
     saved: typeof doc.saved === "number" ? doc.saved : parseInt(doc.saved || "0", 10),
+    views: typeof doc.views === "number" ? doc.views : parseInt(doc.views || "0", 10),
+    shares: typeof doc.shares === "number" ? doc.shares : parseInt(doc.shares || "0", 10),
     $createdAt: doc.$createdAt,
     $updatedAt: doc.$updatedAt,
   };
@@ -104,6 +110,8 @@ export async function createPostService(
     likedBy: JSON.stringify(Array.isArray(draft.likedBy) ? draft.likedBy : []),
     comments: 0,
     saved: 0,
+    views: 0,
+    shares: 0,
     $createdAt: now,
     $updatedAt: now,
   };
@@ -269,5 +277,35 @@ export async function getPostsByIdsService(ids: string[]): Promise<Post[]> {
   } catch (error) {
     console.error("getPostsByIdsService error:", error);
     return [];
+  }
+}
+
+export async function incrementPostViewsService(postId: string): Promise<number> {
+  try {
+    const doc = await databases.getDocument(DATABASE_ID, POSTS_COLLECTION, postId);
+    const currentViews = typeof doc.views === "number" ? doc.views : parseInt(doc.views || "0", 10);
+    const newViews = currentViews + 1;
+    await databases.updateDocument(DATABASE_ID, POSTS_COLLECTION, postId, {
+      views: newViews,
+    });
+    return newViews;
+  } catch (error) {
+    console.error("incrementPostViewsService error:", error);
+    return 0;
+  }
+}
+
+export async function incrementPostSharesService(postId: string): Promise<number> {
+  try {
+    const doc = await databases.getDocument(DATABASE_ID, POSTS_COLLECTION, postId);
+    const currentShares = typeof doc.shares === "number" ? doc.shares : parseInt(doc.shares || "0", 10);
+    const newShares = currentShares + 1;
+    await databases.updateDocument(DATABASE_ID, POSTS_COLLECTION, postId, {
+      shares: newShares,
+    });
+    return newShares;
+  } catch (error) {
+    console.error("incrementPostSharesService error:", error);
+    return 0;
   }
 }

@@ -1,17 +1,46 @@
 // app/api/products/create/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createProductService, ProductDraft } from "@/lib/services/products.service";
+import { getVendorByUserIdService } from "@/lib/services/vendors.service";
+import {
+  isVendorPremium,
+  getVendorProductCountThisMonth,
+  FREE_TIER_LIMITS,
+} from "@/lib/services/subscriptions.service";
+
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { draft, vendor } = body;
+    const { draft, vendor, userId } = body;
 
     if (!draft || !vendor) {
       return NextResponse.json(
         { error: "Missing product draft or vendor ID" },
         { status: 400 }
       );
+    }
+
+    // Enforce Free-tier monthly product limit
+    if (userId) {
+      try {
+        const vendorDoc = await getVendorByUserIdService(userId);
+        if (vendorDoc && !isVendorPremium(vendorDoc)) {
+          const count = await getVendorProductCountThisMonth(vendor);
+          if (count >= FREE_TIER_LIMITS.products) {
+            return NextResponse.json(
+              {
+                error: `Free plan limit reached. You can only add ${FREE_TIER_LIMITS.products} products per month. Upgrade to Premium for unlimited listings.`,
+                limitReached: true,
+                plan: "free",
+              },
+              { status: 403 }
+            );
+          }
+        }
+      } catch (limitErr) {
+        console.error("Limit check failed (non-blocking):", limitErr);
+      }
     }
 
     const missingFields: string[] = [];
