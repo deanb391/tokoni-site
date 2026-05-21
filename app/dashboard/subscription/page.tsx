@@ -1,7 +1,7 @@
 // app/dashboard/subscription/page.tsx
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { isVendorPremium, SUBSCRIPTION_PRICE_NGN, FREE_TIER_LIMITS, TokoniPayment } from '@/lib/services/subscriptions.service';
@@ -52,7 +52,7 @@ function formatNaira(amount: number) {
     return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0 }).format(amount);
 }
 
-export default function SubscriptionPage() {
+function SubscriptionForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user, vendor, loading, refetchVendor } = useUser();
@@ -333,5 +333,20 @@ export default function SubscriptionPage() {
                 @keyframes spin { to { transform: rotate(360deg); } }
             `}</style>
         </div>
+    );
+}
+
+export default function SubscriptionPage() {
+    return (
+        <Suspense fallback={
+            <div style={{ backgroundColor: '#F9FAFB', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-body), sans-serif' }}>
+                <div style={{ textAlign: 'center', color: '#666' }}>
+                    <div style={{ width: '40px', height: '40px', border: '3px solid rgba(185,0,27,0.1)', borderTop: '3px solid #B9001B', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
+                    <p style={{ fontSize: '14px', fontWeight: '600' }}>Loading subscription details...</p>
+                </div>
+            </div>
+        }>
+            <SubscriptionForm />
+        </Suspense>
     );
 }

@@ -1,10 +1,10 @@
 // app/payment/failed/page.tsx
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function PaymentFailedPage() {
+function PaymentFailedForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -162,5 +162,20 @@ export default function PaymentFailedPage() {
                 }
             `}</style>
         </div>
+    );
+}
+
+export default function PaymentFailedPage() {
+    return (
+        <Suspense fallback={
+            <div style={{ backgroundColor: '#F9FAFB', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-body), sans-serif' }}>
+                <div style={{ textAlign: 'center', color: '#666' }}>
+                    <div style={{ width: '40px', height: '40px', border: '3px solid rgba(185,0,27,0.1)', borderTop: '3px solid #B9001B', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
+                    <p style={{ fontSize: '14px', fontWeight: '600' }}>Loading payment info...</p>
+                </div>
+            </div>
+        }>
+            <PaymentFailedForm />
+        </Suspense>
     );
 }

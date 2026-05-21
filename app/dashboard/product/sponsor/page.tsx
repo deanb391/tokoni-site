@@ -1,7 +1,7 @@
 // app/dashboard/product/sponsor/page.tsx
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { isVendorPremium, calculateSponsorshipPrice, SPONSORSHIP_PRICES, INTERPLATFORM_PRICES, SponsorshipDuration } from '@/lib/services/subscriptions.service';
@@ -36,7 +36,7 @@ function formatNaira(amount: number) {
     return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0 }).format(amount);
 }
 
-export default function SponsorProductPage() {
+function SponsorProductForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user, vendor, loading } = useUser();
@@ -333,5 +333,20 @@ export default function SponsorProductPage() {
                 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
             `}</style>
         </div>
+    );
+}
+
+export default function SponsorProductPage() {
+    return (
+        <Suspense fallback={
+            <div style={{ backgroundColor: '#F9FAFB', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-body), sans-serif' }}>
+                <div style={{ textAlign: 'center', color: '#666' }}>
+                    <div style={{ width: '40px', height: '40px', border: '3px solid rgba(185,0,27,0.1)', borderTop: '3px solid #B9001B', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }} />
+                    <p style={{ fontSize: '14px', fontWeight: '600' }}>Loading sponsorship details...</p>
+                </div>
+            </div>
+        }>
+            <SponsorProductForm />
+        </Suspense>
     );
 }
