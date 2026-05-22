@@ -167,7 +167,7 @@ export function PostPublishProvider({ children }: { children: ReactNode }) {
 
             setPublishingPost(prev => {
               const nextMedia = prev.mediaFiles.map(f =>
-                f.id === uFile.id ? { ...f, status: "done", progress: 100 } : f
+                f.id === uFile.id ? { ...f, status: "done" as const, progress: 100 } : f
               );
               const totalProgress = nextMedia.reduce((acc, f) => acc + f.progress, 0);
               const avgProgress = Math.round(totalProgress / nextMedia.length);
@@ -184,7 +184,7 @@ export function PostPublishProvider({ children }: { children: ReactNode }) {
             uFile.status = "error";
             setPublishingPost(prev => ({
               ...prev,
-              mediaFiles: prev.mediaFiles.map(f => (f.id === uFile.id ? { ...f, status: "error" } : f)),
+              mediaFiles: prev.mediaFiles.map(f => (f.id === uFile.id ? { ...f, status: "error" as const } : f)),
             }));
             throw err;
           }
