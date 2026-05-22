@@ -71,6 +71,29 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
+    const action = req.nextUrl.searchParams.get("action");
+    if (action === "presigned") {
+      const folder = req.nextUrl.searchParams.get("folder") || "misc";
+      const contentType = req.nextUrl.searchParams.get("contentType") || "application/octet-stream";
+      const filename = req.nextUrl.searchParams.get("filename") || "file";
+
+      const parts = filename.split(".");
+      const extension = parts.length > 1 ? parts[parts.length - 1] : "bin";
+      const key = `${folder}/${uuidv4()}.${extension}`;
+
+      const uploadUrl = s3.getSignedUrl("putObject", {
+        Bucket: BUCKET_NAME,
+        Key: key,
+        ContentType: contentType,
+        Expires: 300, // 5 minutes
+      });
+
+      const cdnUrl = process.env.NEXT_PUBLIC_CLOUDFRONT_URL || `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com`;
+      const fileUrl = `${cdnUrl}/${key}`;
+
+      return NextResponse.json({ uploadUrl, fileUrl });
+    }
+
     const s3Url = req.nextUrl.searchParams.get("url");
     if (!s3Url) {
       return NextResponse.json({ error: "Missing key" }, { status: 400 });
@@ -89,7 +112,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ signedUrl });
   } catch (err: any) {
-    console.error("Failed to build download URL:", err);
-    return NextResponse.json({ error: err.message || "Failed to build download URL" }, { status: 500 });
+    console.error("Failed in GET upload route:", err);
+    return NextResponse.json({ error: err.message || "Failed" }, { status: 500 });
   }
 }

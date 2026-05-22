@@ -83,6 +83,11 @@ export async function GET(req: NextRequest) {
         score += 10 * commentsScore;
         score += 10 * sharesScore;
         score += 10 * savedScore;
+
+        // Boost videos for Reels
+        if (post.type === "video") {
+          score += 500;
+        }
       } else {
         // --- STANDARD FEED ALGORITHM ---
         // Level 1: Keywords, Following (Weight = 1000)
@@ -98,17 +103,61 @@ export async function GET(req: NextRequest) {
         score += 10 * commentsScore;
         score += 10 * sharesScore;
         score += 10 * savedScore;
+
+        // Boost images for Standard Feed
+        if (post.type === "image") {
+          score += 500;
+        }
       }
 
       return { post, score };
     });
 
-    // Sort descending by score
-    scoredPosts.sort((a, b) => b.score - a.score);
+    // Separate candidate posts into image and video categories
+    const imageScoredPosts = scoredPosts.filter(sp => sp.post.type === "image");
+    const videoScoredPosts = scoredPosts.filter(sp => sp.post.type === "video");
 
-    // Paginate
-    const paginated = scoredPosts.slice(offset, offset + limit).map(sp => sp.post);
-    const hasMore = offset + limit < scoredPosts.length;
+    // Sort both sub-pools descending by score
+    imageScoredPosts.sort((a, b) => b.score - a.score);
+    videoScoredPosts.sort((a, b) => b.score - a.score);
+
+    // Interleave posts based on target ratios:
+    // Feed = 70% images, 30% videos (targetImageRatio = 0.7)
+    // Reels = 20% images, 80% videos (targetImageRatio = 0.2)
+    const targetImageRatio = type === "reels" ? 0.2 : 0.7;
+    const mergedScoredPosts: typeof scoredPosts = [];
+    let imgIdx = 0;
+    let vidIdx = 0;
+
+    while (imgIdx < imageScoredPosts.length || vidIdx < videoScoredPosts.length) {
+      const currentTotal = mergedScoredPosts.length;
+      let takeImage = false;
+
+      if (imgIdx < imageScoredPosts.length && vidIdx < videoScoredPosts.length) {
+        if (currentTotal === 0) {
+          takeImage = targetImageRatio >= 0.5;
+        } else {
+          const currentImageRatio = imgIdx / currentTotal;
+          takeImage = currentImageRatio < targetImageRatio;
+        }
+      } else if (imgIdx < imageScoredPosts.length) {
+        takeImage = true;
+      } else {
+        takeImage = false;
+      }
+
+      if (takeImage) {
+        mergedScoredPosts.push(imageScoredPosts[imgIdx]);
+        imgIdx++;
+      } else {
+        mergedScoredPosts.push(videoScoredPosts[vidIdx]);
+        vidIdx++;
+      }
+    }
+
+    // Paginate from the combined, interleaved pool
+    const paginated = mergedScoredPosts.slice(offset, offset + limit).map(sp => sp.post);
+    const hasMore = offset + limit < mergedScoredPosts.length;
 
     return NextResponse.json(
       {

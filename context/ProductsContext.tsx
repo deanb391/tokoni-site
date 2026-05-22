@@ -3,11 +3,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getGlobalProducts } from '@/lib/api/products';
 import { Product } from '@/lib/services/products.service';
-import { trackSearchKeywords } from '@/lib/utils/keywordTracker';
+import { trackSearchKeywords, getTopKeywords } from '@/lib/utils/keywordTracker';
 
 interface SectionState {
   products: Product[];
-  cursor: string | undefined;
+  offset: number;
   hasMore: boolean;
   loading: boolean;
   loadingMore: boolean;
@@ -31,10 +31,12 @@ const CATEGORIES = ['Fashion', 'Electronics', 'Home & Garden', 'Beauty', 'Sports
 export function ProductsProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("All Categories");
+  const [seed, setSeed] = useState("");
+  const [sortedCategories, setSortedCategories] = useState<string[]>(['All Categories', ...CATEGORIES]);
 
   const initialSectionState = (): SectionState => ({
     products: [],
-    cursor: undefined,
+    offset: 0,
     hasMore: true,
     loading: true,
     loadingMore: false
@@ -42,30 +44,75 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
 
   const [sections, setSections] = useState<Record<string, SectionState>>({});
 
+  useEffect(() => {
+    // Generate a random seed on page mount to randomize product sorting
+    setSeed(Math.random().toString());
+
+    const loadDynamicCategories = async () => {
+      let dynamicCats = [...CATEGORIES];
+      try {
+        // Fetch up to 100 products to extract unique categories dynamically
+        const res = await getGlobalProducts(100);
+        res.products.forEach(p => {
+          if (p.category && !dynamicCats.some(c => c.toLowerCase() === p.category.toLowerCase())) {
+            // Capitalize category name nicely
+            const formattedCat = p.category.charAt(0).toUpperCase() + p.category.slice(1);
+            dynamicCats.push(formattedCat);
+          }
+        });
+      } catch (err) {
+        console.error("Failed to load dynamic categories:", err);
+      }
+
+      // Sort categories list based on top user keywords
+      if (typeof window !== "undefined") {
+        const kws = getTopKeywords().map(k => k.toLowerCase());
+        const sorted = dynamicCats.sort((a, b) => {
+          const scoreA = kws.filter(kw => a.toLowerCase().includes(kw) || kw.includes(a.toLowerCase())).length;
+          const scoreB = kws.filter(kw => b.toLowerCase().includes(kw) || kw.includes(b.toLowerCase())).length;
+          return scoreB - scoreA;
+        });
+        setSortedCategories(['All Categories', ...sorted]);
+      }
+    };
+
+    loadDynamicCategories();
+  }, []);
+
   const fetchSectionData = async (
     sectionKey: string, 
     currentSearch: string, 
     isLoadMore = false
   ) => {
-    // Determine query params based on section key
     let category: string | undefined = undefined;
     let sponsored: boolean | undefined = undefined;
+    let recommended = false;
 
     if (sectionKey === 'sponsored') {
       sponsored = true;
+    } else if (sectionKey === 'recommended') {
+      recommended = true;
     } else if (sectionKey === 'new') {
-      // "New" is basically recent global feed items without sponsored filter
       sponsored = undefined;
     } else {
-      // Category row
       category = sectionKey;
     }
 
     const state = sections[sectionKey] || initialSectionState();
-    const cursor = isLoadMore ? state.cursor : undefined;
+    const currentOffset = isLoadMore ? state.offset : 0;
+    const keywords = getTopKeywords();
 
     try {
-      const res = await getGlobalProducts(10, cursor, category, currentSearch || undefined, sponsored);
+      const res = await getGlobalProducts(
+        10, 
+        currentOffset, 
+        category, 
+        currentSearch || undefined, 
+        sponsored,
+        keywords.join(","),
+        seed,
+        recommended
+      );
       
       setSections(prev => {
         const prevSection = prev[sectionKey] || initialSectionState();
@@ -73,7 +120,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
           ...prev,
           [sectionKey]: {
             products: isLoadMore ? [...prevSection.products, ...res.products] : res.products,
-            cursor: res.nextCursor,
+            offset: res.nextOffset || 0,
             hasMore: res.hasMore,
             loading: false,
             loadingMore: false
@@ -94,16 +141,16 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   };
 
   const initAllSections = async (currentSearch: string) => {
-    // Initialize loading indicators for active sections
+    // Determine active sections. We include 'recommended' below 'sponsored'.
     const activeSectionKeys = activeCategory === "All Categories" 
-      ? ['sponsored', 'new', ...CATEGORIES]
+      ? ['sponsored', 'recommended', 'new', ...sortedCategories.filter(c => c !== 'All Categories')]
       : [activeCategory];
 
     const initialMap: Record<string, SectionState> = {};
     activeSectionKeys.forEach(key => {
       initialMap[key] = {
         products: [],
-        cursor: undefined,
+        offset: 0,
         hasMore: true,
         loading: true,
         loadingMore: false
@@ -111,17 +158,20 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     });
     setSections(initialMap);
 
-    // Fetch data concurrently for active sections
     await Promise.all(
       activeSectionKeys.map(key => fetchSectionData(key, currentSearch, false))
     );
   };
 
+  // Immediate execution when search is cleared, otherwise debounced
   useEffect(() => {
+    if (searchQuery === "") {
+      initAllSections("");
+      return;
+    }
+
     const delayDebounce = setTimeout(() => {
-      if (searchQuery) {
-        trackSearchKeywords(searchQuery);
-      }
+      trackSearchKeywords(searchQuery);
       initAllSections(searchQuery);
     }, 450);
 
@@ -132,7 +182,6 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     const state = sections[sectionKey];
     if (!state || state.loadingMore || !state.hasMore) return;
 
-    // Set loadingMore state
     setSections(prev => ({
       ...prev,
       [sectionKey]: {
@@ -157,7 +206,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       setActiveCategory,
       loadMoreForSection,
       refreshAll,
-      categories: ['All Categories', ...CATEGORIES]
+      categories: sortedCategories
     }}>
       {children}
     </ProductsContext.Provider>

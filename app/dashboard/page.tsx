@@ -11,6 +11,7 @@ import { getVendorProducts, getVendorProductsPaginated, getProductById } from '@
 import { getVendorPosts } from '@/lib/api/posts';
 import PostCard from '@/components/PostCard';
 import { isVendorPremium } from '@/lib/services/subscriptions.service';
+import { usePostPublish } from '@/context/PostPublishContext';
 
 
 // --- Inline SVG Icons ---
@@ -84,6 +85,18 @@ const ChevronDownIcon = () => (
     </svg>
 );
 
+const CrownIcon = ({ color = "#FFD700" }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 20h20M5 20L2 8l5 4 5-6 5 6 5-4-3 12"></path>
+    </svg>
+);
+
+const ZapIcon = ({ color = "#B9001B" }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+    </svg>
+);
+
 // --- Category SVGs / Icons ---
 const CatFashion = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 4v4m0 0l-5 4v8h10v-8l-5-4z"></path></svg>;
 const CatBeauty = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>;
@@ -124,6 +137,7 @@ const categories = [
 export default function VendorDashboardScreen() {
     const router = useRouter();
     const { user, vendor, loading, vendorLoading, refetchVendor } = useUser();
+    const { publishingPost, newlyPublishedPosts, clearPublishingState } = usePostPublish();
 
     const [isMobile, setIsMobile] = useState(false);
     const [mounted, setMounted] = useState(false);
@@ -148,6 +162,12 @@ export default function VendorDashboardScreen() {
     const [loadingMorePosts, setLoadingMorePosts] = useState(false);
     const [taggedProductsMap, setTaggedProductsMap] = useState<Record<string, any>>({});
     const postsLoadedRef = useRef(false);
+
+    useEffect(() => {
+        if (publishingPost && publishingPost.status !== 'idle') {
+            setActiveTab('Posts');
+        }
+    }, [publishingPost?.status]);
 
     // Edit Modal State
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -483,7 +503,15 @@ export default function VendorDashboardScreen() {
                 )}
 
                 {/* Profile Info Container */}
-                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: mobile ? '0 1.5rem' : '0 3rem', position: 'relative', paddingBottom: '1rem' }}>
+                <div style={{
+                    maxWidth: '1200px',
+                    margin: '0 auto',
+                    paddingTop: 0,
+                    paddingLeft: mobile ? '1.5rem' : '3rem',
+                    paddingRight: mobile ? '1.5rem' : '3rem',
+                    position: 'relative',
+                    paddingBottom: '1rem'
+                }}>
 
                     <div style={{ display: 'flex', flexDirection: mobile ? 'column' : 'row', alignItems: mobile ? 'center' : 'flex-start', justifyContent: 'space-between', gap: '1.5rem' }}>
 
@@ -595,58 +623,6 @@ export default function VendorDashboardScreen() {
 
                     </div>
 
-                    {/* Quick Actions Banner */}
-                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-                        <button
-                            onClick={() => router.push('/dashboard/subscription')}
-                            style={{
-                                flex: 1, minWidth: '200px',
-                                background: isVendorPremium(vendor)
-                                    ? 'linear-gradient(135deg, #B9001B, #FF4D6D)'
-                                    : 'linear-gradient(135deg, #1F2937, #374151)',
-                                color: '#FFF',
-                                border: 'none',
-                                borderRadius: '14px',
-                                padding: '1rem 1.5rem',
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                                boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
-                                transition: 'transform 0.15s',
-                            }}
-                            onMouseOver={e => (e.currentTarget.style.transform = 'scale(1.02)')}
-                            onMouseOut={e => (e.currentTarget.style.transform = 'scale(1)')}
-                        >
-                            <div style={{ fontSize: '20px', marginBottom: '6px' }}>{isVendorPremium(vendor) ? '👑' : '🔓'}</div>
-                            <p style={{ fontSize: '13px', fontWeight: '800', color: isVendorPremium(vendor) ? '#FFD700' : '#E5E7EB', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                {isVendorPremium(vendor) ? 'Premium Plan' : 'Free Plan'}
-                            </p>
-                            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', margin: 0 }}>
-                                {isVendorPremium(vendor) ? 'Manage subscription →' : 'Upgrade to unlock more →'}
-                            </p>
-                        </button>
-                        <button
-                            onClick={() => router.push('/dashboard/product/sponsor')}
-                            style={{
-                                flex: 1, minWidth: '200px',
-                                background: 'linear-gradient(135deg, #7C3AED, #A78BFA)',
-                                color: '#FFF',
-                                border: 'none',
-                                borderRadius: '14px',
-                                padding: '1rem 1.5rem',
-                                cursor: 'pointer',
-                                textAlign: 'left',
-                                boxShadow: '0 4px 14px rgba(124,58,237,0.2)',
-                                transition: 'transform 0.15s',
-                            }}
-                            onMouseOver={e => (e.currentTarget.style.transform = 'scale(1.02)')}
-                            onMouseOut={e => (e.currentTarget.style.transform = 'scale(1)')}
-                        >
-                            <div style={{ fontSize: '20px', marginBottom: '6px' }}>⚡</div>
-                            <p style={{ fontSize: '13px', fontWeight: '800', color: '#E0D9FF', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sponsored Listings</p>
-                            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', margin: 0 }}>Boost product visibility →</p>
-                        </button>
-                    </div>
-
                     {/* Tabs */}
                     <div style={{ display: 'flex', gap: '2rem', marginTop: '2.5rem', overflowX: 'auto', borderBottom: '2px solid transparent', paddingBottom: '1px' }}>
                         {tabs.map((tab) => {
@@ -679,230 +655,519 @@ export default function VendorDashboardScreen() {
 
             {/* ================= MAIN CONTENT ================= */}
             <main style={{ maxWidth: '1200px', margin: '0 auto', padding: mobile ? '2rem 1.5rem' : '3rem', position: 'relative' }}>
+                <div style={{ display: 'flex', flexDirection: mobile ? 'column-reverse' : 'row', gap: '2.5rem', alignItems: 'flex-start', width: '100%' }}>
 
-                {activeTab === 'Products' && (
-                    <>
-                        {/* Section Header */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#111', margin: 0 }}>Your Products</h2>
-                            <button style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#F3F4F6', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                <FilterSortIcon />
-                            </button>
-                        </div>
-
-                        {/* Product Grid */}
-                        {productsLoading ? (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
-                                {Array.from({ length: 6 }).map((_, i) => (
-                                    <div key={i} style={{ borderRadius: '14px', overflow: 'hidden', backgroundColor: '#FFF', border: '1px solid #EDEDED', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                                        <div style={{ height: '160px', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
-                                        <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            <div style={{ height: '13px', width: '70%', borderRadius: '6px', background: 'linear-gradient(90deg, #E5E7EB 25%, #D1D5DB 50%, #E5E7EB 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
-                                            <div style={{ height: '11px', width: '45%', borderRadius: '6px', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : products.length === 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EDEDED', textAlign: 'center', width: '100%', boxSizing: 'border-box' }}>
-                                <span style={{ fontSize: '48px', marginBottom: '1rem' }}>📦</span>
-                                <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#111', margin: '0 0 0.5rem 0' }}>No Products Listed</h3>
-                                <p style={{ fontSize: '14.5px', color: '#666', maxWidth: '380px', margin: '0 0 1.5rem 0', lineHeight: '1.5' }}>
-                                    You haven't listed any products yet. Click the "Add Product" button to list your first item!
-                                </p>
-                                <button
-                                    onClick={() => router.push('/dashboard/product/add')}
-                                    style={{ backgroundColor: '#B9001B', color: '#FFFFFF', border: 'none', borderRadius: '25px', padding: '0.65rem 1.75rem', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.2s' }}
-                                >
-                                    Add Your First Product
-                                </button>
-                            </div>
-                        ) : (
+                    {/* Left Column: Tab Contents */}
+                    <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
+                        {activeTab === 'Products' && (
                             <>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem', width: '100%' }}>
-                                    {products.map((prod) => {
-                                        const isAvailable = prod.available;
-                                        const badgeText = !isAvailable 
-                                            ? "Draft" 
-                                            : prod.stock > 0 
-                                                ? `In Stock (${prod.stock})` 
-                                                : "Out of Stock";
-                                        const badgeColor = !isAvailable 
-                                            ? "#4b5563" 
-                                            : prod.stock > 0 
-                                                ? "#B9001B" 
-                                                : "#ef4444";
-                                        const badgeBg = !isAvailable 
-                                            ? "#f3f4f6" 
-                                            : prod.stock > 0 
-                                                ? "#FFF0F2" 
-                                                : "#fee2e2";
+                                {/* Section Header */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                    <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#111', margin: 0 }}>Your Products</h2>
+                                    <button style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#F3F4F6', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                        <FilterSortIcon />
+                                    </button>
+                                </div>
 
-                                        return (
-                                            <div key={prod.$id} style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #EDEDED', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer' }}>
-                                                <div onClick={() => router.push(`/product/${prod.$id}`)} style={{ width: '100%', height: '300px', backgroundColor: '#F3F4F6', position: 'relative', overflow: 'hidden' }}>
-                                                    {prod.images && prod.images.length > 0 ? (
-                                                        <img src={prod.images[0]} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    ) : (
-                                                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                            <ImageIcon />
-                                                        </div>
-                                                    )}
-                                                    <div style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: badgeBg, color: badgeColor, padding: '4px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
-                                                        {badgeText}
-                                                    </div>
-                                                </div>
-                                                <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                                                    <h3 onClick={() => router.push(`/product/${prod.$id}`)} style={{ fontSize: '16px', fontWeight: '600', color: '#111', margin: '0 0 0.5rem 0' }}>{prod.name}</h3>
-                                                    <span onClick={() => router.push(`/product/${prod.$id}`)} style={{ fontSize: '15px', color: '#444', fontWeight: '600', marginBottom: '1rem' }}>
-                                                        ₦{prod.price.toFixed(2)}
-                                                        {prod.discountPrice && (
-                                                            <span style={{ textDecoration: 'line-through', color: '#888', fontSize: '13px', marginLeft: '8px', fontWeight: '400' }}>
-                                                                ₦{prod.discountPrice.toFixed(2)}
-                                                            </span>
-                                                        )}
-                                                    </span>
-                                                    <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                        <span style={{ fontSize: '13px', color: '#666' }}>Stock: {prod.stock}</span>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setSelectedProductToEdit(prod);
-                                                                setIsEditProductModalOpen(true);
-                                                            }}
-                                                            style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', color: '#B9001B', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
-                                                        >
-                                                            <EditPencilIcon />
-                                                            Edit
-                                                        </button>
-                                                    </div>
+                                {/* Product Grid */}
+                                {productsLoading ? (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
+                                        {Array.from({ length: 6 }).map((_, i) => (
+                                            <div key={i} style={{ borderRadius: '14px', overflow: 'hidden', backgroundColor: '#FFF', border: '1px solid #EDEDED', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                                                <div style={{ height: '160px', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                                                <div style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    <div style={{ height: '13px', width: '70%', borderRadius: '6px', background: 'linear-gradient(90deg, #E5E7EB 25%, #D1D5DB 50%, #E5E7EB 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                                                    <div style={{ height: '11px', width: '45%', borderRadius: '6px', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
                                                 </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
-                                {productsHasMore && (
-                                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2.5rem', width: '100%' }}>
+                                        ))}
+                                    </div>
+                                ) : products.length === 0 ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EDEDED', textAlign: 'center', width: '100%', boxSizing: 'border-box' }}>
+                                        <span style={{ fontSize: '48px', marginBottom: '1rem' }}>📦</span>
+                                        <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#111', margin: '0 0 0.5rem 0' }}>No Products Listed</h3>
+                                        <p style={{ fontSize: '14.5px', color: '#666', maxWidth: '380px', margin: '0 0 1.5rem 0', lineHeight: '1.5' }}>
+                                            You haven't listed any products yet. Click the "Add Product" button to list your first item!
+                                        </p>
                                         <button
-                                            onClick={handleLoadMoreProducts}
-                                            disabled={loadingMoreProducts}
-                                            style={{
-                                                padding: '0.75rem 2rem',
-                                                backgroundColor: '#FFFFFF',
-                                                color: '#B9001B',
-                                                border: '1px solid #B9001B',
-                                                borderRadius: '25px',
-                                                fontSize: '14px',
-                                                fontWeight: '600',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                                transition: 'all 0.2s',
-                                            }}
+                                            onClick={() => router.push('/dashboard/product/add')}
+                                            style={{ backgroundColor: '#B9001B', color: '#FFFFFF', border: 'none', borderRadius: '25px', padding: '0.65rem 1.75rem', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'background-color 0.2s' }}
                                         >
-                                            {loadingMoreProducts ? 'Loading...' : 'Load More Products'}
+                                            Add Your First Product
                                         </button>
                                     </div>
+                                ) : (
+                                    <>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2rem', width: '100%' }}>
+                                            {products.map((prod) => {
+                                                const isAvailable = prod.available;
+                                                const badgeText = !isAvailable
+                                                    ? "Draft"
+                                                    : prod.stock > 0
+                                                        ? `In Stock (${prod.stock})`
+                                                        : "Out of Stock";
+                                                const badgeColor = !isAvailable
+                                                    ? "#4b5563"
+                                                    : prod.stock > 0
+                                                        ? "#B9001B"
+                                                        : "#ef4444";
+                                                const badgeBg = !isAvailable
+                                                    ? "#f3f4f6"
+                                                    : prod.stock > 0
+                                                        ? "#FFF0F2"
+                                                        : "#fee2e2";
+
+                                                return (
+                                                    <div key={prod.$id} style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #EDEDED', overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s, box-shadow 0.2s', cursor: 'pointer' }}>
+                                                        <div onClick={() => router.push(`/product/${prod.$id}`)} style={{ width: '100%', height: '300px', backgroundColor: '#F3F4F6', position: 'relative', overflow: 'hidden' }}>
+                                                            {prod.images && prod.images.length > 0 ? (
+                                                                <img src={prod.images[0]} alt={prod.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                            ) : (
+                                                                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    <ImageIcon />
+                                                                </div>
+                                                            )}
+                                                            <div style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: badgeBg, color: badgeColor, padding: '4px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
+                                                                {badgeText}
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                                            <h3 onClick={() => router.push(`/product/${prod.$id}`)} style={{ fontSize: '16px', fontWeight: '600', color: '#111', margin: '0 0 0.5rem 0' }}>{prod.name}</h3>
+                                                            <span onClick={() => router.push(`/product/${prod.$id}`)} style={{ fontSize: '15px', color: '#444', fontWeight: '600', marginBottom: '1rem' }}>
+                                                                ₦{prod.price.toFixed(2)}
+                                                                {prod.discountPrice && (
+                                                                    <span style={{ textDecoration: 'line-through', color: '#888', fontSize: '13px', marginLeft: '8px', fontWeight: '400' }}>
+                                                                        ₦{prod.discountPrice.toFixed(2)}
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                            <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                <span style={{ fontSize: '13px', color: '#666' }}>Stock: {prod.stock}</span>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSelectedProductToEdit(prod);
+                                                                        setIsEditProductModalOpen(true);
+                                                                    }}
+                                                                    style={{ background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', color: '#B9001B', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: 0 }}
+                                                                >
+                                                                    <EditPencilIcon />
+                                                                    Edit
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        {productsHasMore && (
+                                            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2.5rem', width: '100%' }}>
+                                                <button
+                                                    onClick={handleLoadMoreProducts}
+                                                    disabled={loadingMoreProducts}
+                                                    style={{
+                                                        padding: '0.75rem 2rem',
+                                                        backgroundColor: '#FFFFFF',
+                                                        color: '#B9001B',
+                                                        border: '1px solid #B9001B',
+                                                        borderRadius: '25px',
+                                                        fontSize: '14px',
+                                                        fontWeight: '600',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        transition: 'all 0.2s',
+                                                    }}
+                                                >
+                                                    {loadingMoreProducts ? 'Loading...' : 'Load More Products'}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </>
                         )}
-                    </>
-                )}
 
-                {activeTab === 'Posts' && (
-                    <>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#111', margin: 0 }}>Your Posts</h2>
-                        </div>
+                        {activeTab === 'Posts' && (() => {
+                            const getVendorId = (v: any) => {
+                                if (!v) return "";
+                                if (typeof v === "string") return v;
+                                return v.$id || "";
+                            };
+                            const allPosts = [
+                                ...newlyPublishedPosts.filter(np => getVendorId(np.vendor) === getVendorId(vendor?.$id)),
+                                ...posts.filter(p => !newlyPublishedPosts.some(np => np.$id === p.$id))
+                            ];
+                            const displayTaggedProductsMap = {
+                                ...taggedProductsMap,
+                                ...products.reduce((acc, p) => ({ ...acc, [p.$id]: p }), {})
+                            };
 
-                        {postsLoading ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', maxWidth: '540px', margin: '0 auto' }}>
-                                {Array.from({ length: 3 }).map((_, i) => (
-                                    <div key={i} style={{ backgroundColor: '#FFF', borderRadius: '16px', border: '1px solid #EDEDED', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                                        {/* Header skeleton */}
-                                        <div style={{ padding: '14px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #F9FAFB' }}>
-                                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', flexShrink: 0 }} />
-                                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                                <div style={{ height: '12px', width: '40%', borderRadius: '4px', background: 'linear-gradient(90deg, #E5E7EB 25%, #D1D5DB 50%, #E5E7EB 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
-                                                <div style={{ height: '10px', width: '25%', borderRadius: '4px', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                            return (
+                                <>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                        <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#111', margin: 0 }}>Your Posts</h2>
+                                    </div>
+
+                                    {/* Background Post Publishing Progress Banner */}
+                                    {publishingPost && publishingPost.status !== 'idle' && publishingPost.status !== 'done' && (
+                                        <div style={{
+                                            backgroundColor: '#FFFFFF',
+                                            border: '1px solid #EDEDED',
+                                            borderRadius: '16px',
+                                            padding: '1.25rem',
+                                            marginBottom: '1.5rem',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '12px',
+                                            boxShadow: '0 4px 16px rgba(0,0,0,0.03)',
+                                            width: '100%',
+                                            maxWidth: '540px',
+                                            margin: '0 auto 1.5rem',
+                                            boxSizing: 'border-box'
+                                        }}>
+                                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                <div style={{ width: '48px', height: '48px', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#F3F4F6', flexShrink: 0, border: '1px solid #EDEDED', position: 'relative' }}>
+                                                    {publishingPost.mediaFiles[0]?.previewUrl ? (
+                                                        publishingPost.postType === 'video' ? (
+                                                            <video src={publishingPost.mediaFiles[0].previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+                                                        ) : (
+                                                            <img src={publishingPost.mediaFiles[0].previewUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        )
+                                                    ) : (
+                                                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+                                                            📝
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                                        <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#111827' }}>
+                                                            {publishingPost.status === 'uploading' ? 'Uploading media...' : 'Creating post...'}
+                                                        </span>
+                                                        <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#B9001B' }}>
+                                                            {publishingPost.progress}%
+                                                        </span>
+                                                    </div>
+                                                    <div style={{ fontSize: '12px', color: '#6B7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        {publishingPost.caption || 'No caption'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div style={{ width: '100%', height: '6px', backgroundColor: '#F3F4F6', borderRadius: '3px', overflow: 'hidden' }}>
+                                                <div style={{ width: `${publishingPost.progress}%`, height: '100%', backgroundColor: '#B9001B', borderRadius: '3px', transition: 'width 0.3s ease' }}></div>
                                             </div>
                                         </div>
-                                        {/* Image skeleton */}
-                                        <div style={{ width: '100%', aspectRatio: '1/1', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
-                                        {/* Actions skeleton */}
-                                        <div style={{ padding: '14px', display: 'flex', gap: '16px' }}>
-                                            {[1, 2, 3].map(j => <div key={j} style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#F3F4F6', animation: 'shimmer 1.5s infinite' }} />)}
+                                    )}
+
+                                    {publishingPost && publishingPost.status === 'error' && (
+                                        <div style={{
+                                            backgroundColor: '#FEF2F2',
+                                            border: '1px solid #FEE2E2',
+                                            borderRadius: '16px',
+                                            padding: '1.25rem',
+                                            marginBottom: '1.5rem',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            gap: '12px',
+                                            width: '100%',
+                                            maxWidth: '540px',
+                                            margin: '0 auto 1.5rem',
+                                            boxSizing: 'border-box'
+                                        }}>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '18px' }}>⚠️</span>
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#991B1B' }}>Publishing Failed</span>
+                                                    <span style={{ fontSize: '12px', color: '#EF4444', fontWeight: '500' }}>{publishingPost.errorMessage || 'Failed to publish post'}</span>
+                                                </div>
+                                            </div>
+                                            <button onClick={clearPublishingState} style={{ background: 'none', border: 'none', color: '#991B1B', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <CloseIcon />
+                                            </button>
                                         </div>
-                                        {/* Text skeleton */}
-                                        <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            <div style={{ height: '11px', width: '30%', borderRadius: '4px', background: '#F3F4F6', animation: 'shimmer 1.5s infinite' }} />
-                                            <div style={{ height: '13px', width: '80%', borderRadius: '4px', background: '#E5E7EB', animation: 'shimmer 1.5s infinite' }} />
-                                            <div style={{ height: '13px', width: '60%', borderRadius: '4px', background: '#F3F4F6', animation: 'shimmer 1.5s infinite' }} />
+                                    )}
+
+                                    {postsLoading ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', maxWidth: '540px', margin: '0 auto' }}>
+                                            {Array.from({ length: 3 }).map((_, i) => (
+                                                <div key={i} style={{ backgroundColor: '#FFF', borderRadius: '16px', border: '1px solid #EDEDED', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                                                    {/* Header skeleton */}
+                                                    <div style={{ padding: '14px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #F9FAFB' }}>
+                                                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', flexShrink: 0 }} />
+                                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                            <div style={{ height: '12px', width: '40%', borderRadius: '4px', background: 'linear-gradient(90deg, #E5E7EB 25%, #D1D5DB 50%, #E5E7EB 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                                                            <div style={{ height: '10px', width: '25%', borderRadius: '4px', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                                                        </div>
+                                                    </div>
+                                                    {/* Image skeleton */}
+                                                    <div style={{ width: '100%', aspectRatio: '1/1', background: 'linear-gradient(90deg, #F3F4F6 25%, #E9EAEB 50%, #F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                                                    {/* Actions skeleton */}
+                                                    <div style={{ padding: '14px', display: 'flex', gap: '16px' }}>
+                                                        {[1, 2, 3].map(j => <div key={j} style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#F3F4F6', animation: 'shimmer 1.5s infinite' }} />)}
+                                                    </div>
+                                                    {/* Text skeleton */}
+                                                    <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                        <div style={{ height: '11px', width: '30%', borderRadius: '4px', background: '#F3F4F6', animation: 'shimmer 1.5s infinite' }} />
+                                                        <div style={{ height: '13px', width: '80%', borderRadius: '4px', background: '#E5E7EB', animation: 'shimmer 1.5s infinite' }} />
+                                                        <div style={{ height: '13px', width: '60%', borderRadius: '4px', background: '#F3F4F6', animation: 'shimmer 1.5s infinite' }} />
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : posts.length === 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EDEDED', textAlign: 'center', width: '100%', boxSizing: 'border-box' }}>
-                                <span style={{ fontSize: '48px', marginBottom: '1rem' }}>📸</span>
-                                <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#111', margin: '0 0 0.5rem 0' }}>No Posts Published</h3>
-                                <p style={{ fontSize: '14.5px', color: '#666', maxWidth: '380px', margin: '0 0 1.5rem 0', lineHeight: '1.5' }}>
-                                    You haven't shared any posts yet. Click the "+" button to publish your first post!
+                                    ) : allPosts.length === 0 ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EDEDED', textAlign: 'center', width: '100%', boxSizing: 'border-box' }}>
+                                            <span style={{ fontSize: '48px', marginBottom: '1rem' }}>📸</span>
+                                            <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#111', margin: '0 0 0.5rem 0' }}>No Posts Published</h3>
+                                            <p style={{ fontSize: '14.5px', color: '#666', maxWidth: '380px', margin: '0 0 1.5rem 0', lineHeight: '1.5' }}>
+                                                You haven't shared any posts yet. Click the "+" button to publish your first post!
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', width: '100%', maxWidth: '540px', margin: '0 auto' }}>
+                                            {allPosts.map((post) => (
+                                                <PostCard
+                                                    key={post.$id}
+                                                    post={post}
+                                                    vendorName={vendor.businessName}
+                                                    vendorLogo={vendor.logoImage}
+                                                    taggedProductsMap={displayTaggedProductsMap}
+                                                    currentUserId={user?.$id}
+                                                />
+                                            ))}
+
+                                            {postsHasMore && (
+                                                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem', width: '100%' }}>
+                                                    <button
+                                                        onClick={handleLoadMorePosts}
+                                                        disabled={loadingMorePosts}
+                                                        style={{
+                                                            padding: '0.75rem 2rem',
+                                                            backgroundColor: '#FFFFFF',
+                                                            color: '#B9001B',
+                                                            border: '1px solid #B9001B',
+                                                            borderRadius: '25px',
+                                                            fontSize: '14px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '8px',
+                                                            transition: 'all 0.2s',
+                                                        }}
+                                                    >
+                                                        {loadingMorePosts ? 'Loading...' : 'Load More Posts'}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
+
+                        {activeTab !== 'Products' && activeTab !== 'Posts' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EDEDED', textAlign: 'center' }}>
+                                <span style={{ fontSize: '48px', marginBottom: '1rem' }}>📦</span>
+                                <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#111', margin: '0 0 0.5rem 0' }}>{activeTab} Management</h3>
+                                <p style={{ fontSize: '14.5px', color: '#666', maxWidth: '380px', margin: 0 }}>
+                                    This dashboard tab is ready for backend connection. Add actual items or adjust setting parameters.
                                 </p>
                             </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', width: '100%', maxWidth: '540px', margin: '0 auto' }}>
-                                {posts.map((post) => (
-                                    <PostCard
-                                        key={post.$id}
-                                        post={post}
-                                        vendorName={vendor.businessName}
-                                        vendorLogo={vendor.logoImage}
-                                        taggedProductsMap={taggedProductsMap}
-                                        currentUserId={user?.$id}
-                                    />
-                                ))}
-
-                                {postsHasMore && (
-                                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1.5rem', width: '100%' }}>
-                                        <button
-                                            onClick={handleLoadMorePosts}
-                                            disabled={loadingMorePosts}
-                                            style={{
-                                                padding: '0.75rem 2rem',
-                                                backgroundColor: '#FFFFFF',
-                                                color: '#B9001B',
-                                                border: '1px solid #B9001B',
-                                                borderRadius: '25px',
-                                                fontSize: '14px',
-                                                fontWeight: '600',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                                transition: 'all 0.2s',
-                                            }}
-                                        >
-                                            {loadingMorePosts ? 'Loading...' : 'Load More Posts'}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
                         )}
-                    </>
-                )}
-
-                {activeTab !== 'Products' && activeTab !== 'Posts' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EDEDED', textAlign: 'center' }}>
-                        <span style={{ fontSize: '48px', marginBottom: '1rem' }}>📦</span>
-                        <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#111', margin: '0 0 0.5rem 0' }}>{activeTab} Management</h3>
-                        <p style={{ fontSize: '14.5px', color: '#666', maxWidth: '380px', margin: 0 }}>
-                            This dashboard tab is ready for backend connection. Add actual items or adjust setting parameters.
-                        </p>
                     </div>
-                )}
 
+                    {/* Right Column: Sidebar Actions */}
+                    <div style={{ width: mobile ? '100%' : '320px', display: 'flex', flexDirection: 'column', gap: '1.5rem', flexShrink: 0 }}>
+                        {/* Subscription Card */}
+                        {(() => {
+                            const isPremium = isVendorPremium(vendor);
+                            return (
+                                <div style={{
+                                    borderRadius: '20px',
+                                    padding: '1.5rem',
+                                    background: isPremium
+                                        ? 'linear-gradient(135deg, #1F070A 0%, #3D0B12 100%)'
+                                        : '#FFFFFF',
+                                    border: isPremium
+                                        ? '1px solid rgba(255, 215, 0, 0.2)'
+                                        : '1px solid #EDEDED',
+                                    boxShadow: isPremium
+                                        ? '0 10px 30px rgba(185, 0, 27, 0.15)'
+                                        : '0 4px 20px rgba(0,0,0,0.02)',
+                                    position: 'relative',
+                                    overflow: 'hidden',
+                                    transition: 'all 0.3s ease',
+                                }}>
+                                    {isPremium && (
+                                        <>
+                                            <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'rgba(255, 215, 0, 0.05)', filter: 'blur(20px)' }} />
+                                            <div style={{ position: 'absolute', bottom: '-40px', left: '-20px', width: '90px', height: '90px', borderRadius: '50%', backgroundColor: 'rgba(185, 0, 27, 0.2)', filter: 'blur(15px)' }} />
+                                        </>
+                                    )}
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
+                                        <div style={{
+                                            width: '36px',
+                                            height: '36px',
+                                            borderRadius: '10px',
+                                            backgroundColor: isPremium ? 'rgba(255, 215, 0, 0.1)' : '#FFF0F2',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            flexShrink: 0
+                                        }}>
+                                            <CrownIcon color={isPremium ? '#FFD700' : '#B9001B'} />
+                                        </div>
+                                        <div>
+                                            <h4 style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.75px', color: isPremium ? '#FFD700' : '#888', margin: '0 0 2px 0' }}>
+                                                Store Plan
+                                            </h4>
+                                            <p style={{ fontSize: '16px', fontWeight: '800', color: isPremium ? '#FFFFFF' : '#111111', margin: 0 }}>
+                                                {isPremium ? '✦ Premium' : 'Free Account'}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <p style={{
+                                        fontSize: '13px',
+                                        lineHeight: '1.5',
+                                        color: isPremium ? 'rgba(255, 255, 255, 0.75)' : '#666666',
+                                        margin: '0 0 1.25rem 0'
+                                    }}>
+                                        {isPremium
+                                            ? 'Your storefront has unlimited listings, posts, and a 50% discount on product sponsorships.'
+                                            : 'List up to 15 products and 20 posts. Upgrade to unlock unlimited access and sponsored list discounts.'
+                                        }
+                                    </p>
+
+                                    <button
+                                        onClick={() => router.push('/dashboard/subscription')}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem 1rem',
+                                            borderRadius: '12px',
+                                            border: isPremium ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
+                                            backgroundColor: isPremium ? 'rgba(255, 255, 255, 0.08)' : '#B9001B',
+                                            color: '#FFFFFF',
+                                            fontSize: '13.5px',
+                                            fontWeight: '700',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            boxShadow: isPremium ? 'none' : '0 4px 12px rgba(185, 0, 27, 0.15)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '6px'
+                                        }}
+                                        onMouseOver={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(-1px)';
+                                            if (isPremium) {
+                                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+                                            } else {
+                                                e.currentTarget.style.backgroundColor = '#9a0014';
+                                                e.currentTarget.style.boxShadow = '0 6px 16px rgba(185, 0, 27, 0.25)';
+                                            }
+                                        }}
+                                        onMouseOut={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                            if (isPremium) {
+                                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+                                            } else {
+                                                e.currentTarget.style.backgroundColor = '#B9001B';
+                                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(185, 0, 27, 0.15)';
+                                            }
+                                        }}
+                                    >
+                                        {isPremium ? 'Manage Subscription' : 'Upgrade to Premium 👑'}
+                                    </button>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Sponsorship Card */}
+                        <div style={{
+                            borderRadius: '20px',
+                            padding: '1.5rem',
+                            background: 'linear-gradient(135deg, #0F0E1C 0%, #1A153A 100%)',
+                            border: '1px solid rgba(124, 58, 237, 0.2)',
+                            boxShadow: '0 10px 30px rgba(124, 58, 237, 0.1)',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            transition: 'all 0.3s ease',
+                        }}>
+                            <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'rgba(124, 58, 237, 0.08)', filter: 'blur(20px)' }} />
+                            <div style={{ position: 'absolute', bottom: '-40px', left: '-20px', width: '90px', height: '90px', borderRadius: '50%', backgroundColor: 'rgba(167, 139, 250, 0.05)', filter: 'blur(15px)' }} />
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
+                                <div style={{
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '10px',
+                                    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0
+                                }}>
+                                    <ZapIcon color="#C084FC" />
+                                </div>
+                                <div>
+                                    <h4 style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.75px', color: '#A78BFA', margin: '0 0 2px 0' }}>
+                                        Store Visibility
+                                    </h4>
+                                    <p style={{ fontSize: '16px', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
+                                        Sponsor Listings
+                                    </p>
+                                </div>
+                            </div>
+
+                            <p style={{
+                                fontSize: '13px',
+                                lineHeight: '1.5',
+                                color: 'rgba(255, 255, 255, 0.75)',
+                                margin: '0 0 1.25rem 0'
+                            }}>
+                                Feature your product listings on the global feed and categories. Sponsored products receive up to 5x more customer views.
+                            </p>
+
+                            <button
+                                onClick={() => router.push('/dashboard/product/sponsor')}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.75rem 1rem',
+                                    borderRadius: '12px',
+                                    border: 'none',
+                                    background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+                                    color: '#FFFFFF',
+                                    fontSize: '13.5px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    boxShadow: '0 4px 12px rgba(124, 58, 237, 0.2)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '6px'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(-1px)';
+                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(124, 58, 237, 0.35)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.2)';
+                                }}
+                            >
+                                Sponsor a Product ⚡
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
             </main>
 
             {/* ================= FLOATING ACTION BUTTON ================= */}
@@ -979,7 +1244,7 @@ export default function VendorDashboardScreen() {
                             {/* Storefront Visuals */}
                             <div>
                                 <label style={{ display: 'block', fontSize: '13.5px', fontWeight: '700', color: '#111', marginBottom: '8px' }}>Storefront Visuals</label>
-                                
+
                                 <div style={{ position: 'relative', marginBottom: '2.5rem' }}>
                                     {/* Cover Image Upload */}
                                     <div

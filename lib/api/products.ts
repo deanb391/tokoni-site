@@ -166,14 +166,21 @@ export async function getProductsByIds(
 
 export async function getGlobalProducts(
   limit = 10,
-  cursor?: string,
+  cursorOrOffset?: string | number,
   category?: string,
   search?: string,
-  sponsored?: boolean
-): Promise<{ products: Product[]; nextCursor?: string; hasMore: boolean }> {
+  sponsored?: boolean,
+  keywords?: string,
+  seed?: string,
+  recommended?: boolean
+): Promise<{ products: Product[]; nextCursor?: string; nextOffset?: number; hasMore: boolean }> {
   let url = `/api/products/list?limit=${limit}`;
-  if (cursor) {
-    url += `&cursor=${encodeURIComponent(cursor)}`;
+  if (cursorOrOffset !== undefined) {
+    if (typeof cursorOrOffset === "number") {
+      url += `&offset=${cursorOrOffset}`;
+    } else {
+      url += `&cursor=${encodeURIComponent(cursorOrOffset)}`;
+    }
   }
   if (category) {
     url += `&category=${encodeURIComponent(category)}`;
@@ -183,6 +190,15 @@ export async function getGlobalProducts(
   }
   if (sponsored !== undefined) {
     url += `&sponsored=${sponsored ? "true" : "false"}`;
+  }
+  if (keywords) {
+    url += `&keywords=${encodeURIComponent(keywords)}`;
+  }
+  if (seed) {
+    url += `&seed=${encodeURIComponent(seed)}`;
+  }
+  if (recommended) {
+    url += `&recommended=true`;
   }
 
   const res = await fetch(url, {
@@ -199,6 +215,7 @@ export async function getGlobalProducts(
   return {
     products: data.products || [],
     nextCursor: data.nextCursor,
+    nextOffset: data.nextOffset,
     hasMore: data.hasMore || false,
   };
 }

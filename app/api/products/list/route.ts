@@ -44,14 +44,37 @@ export async function GET(req: NextRequest) {
         { success: true, products },
         { status: 200 }
       );
-    } else {
-      // Global query
-      const result = await getGlobalProductsService(limit, cursor, category, search, sponsored);
+    }
+
+    // Global query
+      const offsetParam = searchParams.get("offset");
+      const offset = offsetParam ? parseInt(offsetParam, 10) : 0;
+      const keywordsParam = searchParams.get("keywords") || "";
+      const seed = searchParams.get("seed") || undefined;
+      const recommendedParam = searchParams.get("recommended");
+      const recommended = recommendedParam === "true";
+
+      const result = await getGlobalProductsService(
+        limit,
+        cursor,
+        category,
+        search,
+        sponsored,
+        offset,
+        keywordsParam,
+        seed,
+        recommended
+      );
       return NextResponse.json(
-        { success: true, products: result.products, nextCursor: result.nextCursor, hasMore: result.hasMore },
+        { 
+          success: true, 
+          products: result.products, 
+          nextCursor: result.nextCursor, 
+          nextOffset: result.nextOffset, 
+          hasMore: result.hasMore 
+        },
         { status: 200 }
       );
-    }
   } catch (err: any) {
     console.error("LIST PRODUCTS API ROUTE ERROR:", err);
     return NextResponse.json(

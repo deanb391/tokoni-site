@@ -3,8 +3,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getGlobalProducts } from '@/lib/api/products';
 import { getGlobalFeedPosts } from '@/lib/api/posts';
+import { getGlobalVendors } from '@/lib/api/vendors';
 import { Post } from '@/lib/services/posts.service';
 import { Product } from '@/lib/services/products.service';
+import { Vendor } from '@/lib/services/vendors.service';
 import { trackSearchKeywords } from '@/lib/utils/keywordTracker';
 
 export type StreamItem = 
@@ -21,6 +23,9 @@ interface HomeFeedContextType {
   hasMorePosts: boolean;
   loadMore: () => Promise<void>;
   refresh: () => Promise<void>;
+  searchedProducts: Product[];
+  searchedPosts: Post[];
+  searchedVendors: Vendor[];
 }
 
 const HomeFeedContext = createContext<HomeFeedContextType | undefined>(undefined);
@@ -38,6 +43,11 @@ export function HomeFeedProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Search specific results
+  const [searchedProducts, setSearchedProducts] = useState<Product[]>([]);
+  const [searchedPosts, setSearchedPosts] = useState<Post[]>([]);
+  const [searchedVendors, setSearchedVendors] = useState<Vendor[]>([]);
 
   const combineIntoPattern = (prods: Product[], psts: Post[]): StreamItem[] => {
     const result: StreamItem[] = [];
@@ -79,8 +89,6 @@ export function HomeFeedProvider({ children }: { children: ReactNode }) {
       // Fetch posts (limit 6)
       const postRes = await getGlobalFeedPosts(6, undefined); 
 
-      // If search query is present, we filter posts client-side (or just keep global posts if they don't support search matching)
-      // Since posts service doesn't support text search natively, we can filter them by caption client-side if a query exists
       let filteredPosts = postRes.posts;
       if (searchVal) {
         filteredPosts = postRes.posts.filter(p => 
@@ -103,13 +111,39 @@ export function HomeFeedProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Debounced search logic for products, posts, and vendors
   useEffect(() => {
-    const delayDebounce = setTimeout(() => {
-      if (searchQuery) {
-        trackSearchKeywords(searchQuery);
+    if (searchQuery === "") {
+      fetchInitialData("");
+      setSearchedProducts([]);
+      setSearchedPosts([]);
+      setSearchedVendors([]);
+      return;
+    }
+
+    const delayDebounce = setTimeout(async () => {
+      trackSearchKeywords(searchQuery);
+      setLoading(true);
+      try {
+        // 1. Fetch matching products
+        const prodRes = await getGlobalProducts(12, undefined, undefined, searchQuery);
+        // 2. Fetch posts and filter client-side by caption
+        const postRes = await getGlobalFeedPosts(30, undefined);
+        const filteredPosts = postRes.posts.filter(p => 
+          p.caption?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        // 3. Fetch matching vendors
+        const vendorRes = await getGlobalVendors(10, 0, searchQuery);
+
+        setSearchedProducts(prodRes.products);
+        setSearchedPosts(filteredPosts);
+        setSearchedVendors(vendorRes.vendors);
+      } catch (err) {
+        console.error("Error executing home feed search:", err);
+      } finally {
+        setLoading(false);
       }
-      fetchInitialData(searchQuery);
-    }, 400);
+    }, 450);
 
     return () => clearTimeout(delayDebounce);
   }, [searchQuery]);
@@ -166,7 +200,10 @@ export function HomeFeedProvider({ children }: { children: ReactNode }) {
       hasMoreProducts,
       hasMorePosts,
       loadMore,
-      refresh
+      refresh,
+      searchedProducts,
+      searchedPosts,
+      searchedVendors
     }}>
       {children}
     </HomeFeedContext.Provider>

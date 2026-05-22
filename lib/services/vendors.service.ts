@@ -172,3 +172,71 @@ export async function fetchVendorService(
   vendor.followersCount = await getVendorFollowersCountService(vendorId);
   return vendor;
 }
+
+export async function getGlobalVendorsService(
+  limit = 10,
+  offset = 0,
+  search?: string,
+  sortByFollowers = false,
+  newOnly = false
+): Promise<{ vendors: Vendor[]; hasMore: boolean; nextOffset: number }> {
+  try {
+    const queries = [];
+    queries.push(Query.orderDesc("$createdAt"));
+
+    if (!sortByFollowers) {
+      queries.push(Query.limit(limit + 1));
+      queries.push(Query.offset(offset));
+    } else {
+      queries.push(Query.limit(100));
+    }
+
+    const res = await databases.listDocuments(
+      DATABASE_ID,
+      VENDORS_COLLECTION,
+      queries
+    );
+
+    let vendors = await Promise.all(
+      res.documents.map(async doc => {
+        const v = mapVendor(doc);
+        v.followersCount = await getVendorFollowersCountService(v.$id);
+        return v;
+      })
+    );
+
+    if (search) {
+      const queryLower = search.toLowerCase();
+      vendors = vendors.filter(v => 
+        v.businessName.toLowerCase().includes(queryLower) || 
+        (v.tagline && v.tagline.toLowerCase().includes(queryLower))
+      );
+    }
+
+    if (newOnly) {
+      const twoWeeksAgo = Date.now() - (14 * 24 * 60 * 60 * 1000);
+      vendors = vendors.filter(v => new Date(v.$createdAt).getTime() >= twoWeeksAgo);
+    }
+
+    if (sortByFollowers) {
+      vendors.sort((a, b) => (b.followersCount || 0) - (a.followersCount || 0));
+    }
+
+    const paginatedVendors = sortByFollowers 
+      ? vendors.slice(offset, offset + limit)
+      : vendors.slice(0, limit);
+
+    const hasMore = sortByFollowers
+      ? (offset + limit) < vendors.length
+      : res.documents.length > limit;
+
+    return {
+      vendors: paginatedVendors,
+      hasMore,
+      nextOffset: offset + limit
+    };
+  } catch (err) {
+    console.error("Error in getGlobalVendorsService:", err);
+    return { vendors: [], hasMore: false, nextOffset: offset };
+  }
+}

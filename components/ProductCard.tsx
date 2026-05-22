@@ -7,16 +7,17 @@ import { useChat } from '@/context/ChatContext';
 import { getVendorById } from '@/lib/api/vendors';
 import { toggleLikeProduct } from '@/lib/api/products';
 import { Product } from '@/lib/services/products.service';
-import { Heart, MapPin, MessageCircle, ShoppingBag } from 'lucide-react';
+import { Heart, MapPin, MessageCircle, ShoppingBag, Star } from 'lucide-react';
 import { addToCart, CartItem } from '@/lib/utils/cart';
 
 interface ProductCardProps {
     product: Product;
+    hideCart?: boolean;
 }
 
 const BRAND_RED = "#B9001B";
 
-export default function ProductCard({ product: initialProduct }: ProductCardProps) {
+export default function ProductCard({ product: initialProduct, hideCart = false }: ProductCardProps) {
     const router = useRouter();
     const { user, setUser } = useUser();
     const [product, setProduct] = useState<Product>(initialProduct);
@@ -180,6 +181,63 @@ export default function ProductCard({ product: initialProduct }: ProductCardProp
                     </div>
                 )}
 
+                {/* Priority Status Badge */}
+                {(() => {
+                    const isSponsored = product.isSponsored === true || (product as any).sponsored === true;
+                    const isNew = (Date.now() - new Date(product.$createdAt).getTime()) < 24 * 60 * 60 * 1000;
+                    if (isSponsored) {
+                        return (
+                            <span
+                                style={{
+                                    position: 'absolute',
+                                    top: '12px',
+                                    left: '12px',
+                                    backgroundColor: BRAND_RED,
+                                    color: '#FFFFFF',
+                                    fontSize: '9px',
+                                    fontWeight: '800',
+                                    padding: '4px 10px',
+                                    borderRadius: '12px',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.08em',
+                                    boxShadow: '0 4px 10px rgba(185, 0, 27, 0.3)',
+                                    zIndex: 10,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}
+                            >
+                                <Star className="w-2.5 h-2.5 fill-white text-white" />
+                                Sponsored
+                            </span>
+                        );
+                    }
+                    if (isNew) {
+                        return (
+                            <span
+                                style={{
+                                    position: 'absolute',
+                                    top: '12px',
+                                    left: '12px',
+                                    backgroundColor: '#10B981',
+                                    color: '#FFFFFF',
+                                    fontSize: '9px',
+                                    fontWeight: '800',
+                                    padding: '4px 10px',
+                                    borderRadius: '12px',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.08em',
+                                    boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)',
+                                    zIndex: 10
+                                }}
+                            >
+                                New
+                            </span>
+                        );
+                    }
+                    return null;
+                })()}
+
                 {/* Like Button */}
                 <button
                     onClick={handleLikeClick}
@@ -299,34 +357,36 @@ export default function ProductCard({ product: initialProduct }: ProductCardProp
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <button
-                            onClick={handleAddToCart}
-                            title="Add to Cart"
-                            style={{
-                                backgroundColor: '#B9001B',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '20px',
-                                width: '32px',
-                                height: '32px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                transition: 'background-color 0.2s ease, transform 0.15s',
-                                flexShrink: 0
-                            }}
-                            onMouseOver={(e) => {
-                                e.currentTarget.style.backgroundColor = '#9e0014';
-                                e.currentTarget.style.transform = 'scale(1.05)';
-                            }}
-                            onMouseOut={(e) => {
-                                e.currentTarget.style.backgroundColor = '#B9001B';
-                                e.currentTarget.style.transform = 'none';
-                            }}
-                        >
-                            <ShoppingBag style={{ width: "14px", height: "14px" }} />
-                        </button>
+                        {!hideCart && (
+                            <button
+                                onClick={handleAddToCart}
+                                title="Add to Cart"
+                                style={{
+                                    backgroundColor: '#B9001B',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '20px',
+                                    width: '32px',
+                                    height: '32px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'background-color 0.2s ease, transform 0.15s',
+                                    flexShrink: 0
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#9e0014';
+                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#B9001B';
+                                    e.currentTarget.style.transform = 'none';
+                                }}
+                            >
+                                <ShoppingBag style={{ width: "14px", height: "14px" }} />
+                            </button>
+                        )}
 
                         <button
                             onClick={handleContactClick}

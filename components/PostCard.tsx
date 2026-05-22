@@ -20,6 +20,7 @@ interface PostCardProps {
     onLikeToggle?: (postId: string) => void;
     currentUserId?: string;
     onMediaClick?: () => void;
+    isLoadingVendor?: boolean;
 }
 
 // Floating heart particle
@@ -36,7 +37,8 @@ export default function PostCard({
     taggedProductsMap,
     onLikeToggle,
     currentUserId,
-    onMediaClick
+    onMediaClick,
+    isLoadingVendor = false
 }: PostCardProps) {
     const [activeMediaIndex, setActiveMediaIndex] = useState(0);
     const [isLiked, setIsLiked] = useState(currentUserId ? post.likedBy.includes(currentUserId) : false);
@@ -60,15 +62,16 @@ export default function PostCard({
     const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
     const [vendorUserId, setVendorUserId] = useState<string | null>(null);
 
-    const isFollowing = user?.following?.includes(post.vendor) || false;
+    const vendorId = typeof post.vendor === "string" ? post.vendor : (post.vendor as any)?.$id || "";
+    const isFollowing = user?.following?.includes(vendorId) || false;
     const isSaved = user?.savedPosts?.includes(post.$id) || false;
 
     const videoRef = useRef<HTMLVideoElement>(null);
     let particleIdRef = useRef(0);
 
     useEffect(() => {
-        if (!post.vendor) return;
-        if (post.vendor.startsWith("mock-vendor-")) {
+        if (!vendorId) return;
+        if (vendorId.startsWith("mock-vendor-")) {
             setVendorUserId("mock-user-id");
             return;
         }
@@ -76,7 +79,7 @@ export default function PostCard({
         let isMounted = true;
         const loadVendorUser = async () => {
             try {
-                const vendorData = await getVendorById(post.vendor);
+                const vendorData = await getVendorById(vendorId);
                 if (vendorData && isMounted) setVendorUserId(vendorData.users);
             } catch (err) {
                 console.error("Failed to load vendor user ID in PostCard:", err);
@@ -85,7 +88,7 @@ export default function PostCard({
 
         loadVendorUser();
         return () => { isMounted = false; };
-    }, [post.vendor]);
+    }, [vendorId]);
 
     useEffect(() => {
         const videoEl = videoRef.current;
@@ -146,7 +149,7 @@ export default function PostCard({
         if (!user?.$id) { alert("Please sign in to follow vendors."); return; }
         setFollowingLoading(true);
         try {
-            const updated = await toggleFollowVendor(user.$id, post.vendor);
+            const updated = await toggleFollowVendor(user.$id, vendorId);
             setUser(updated);
         } catch (err) {
             console.error("Failed to toggle follow vendor:", err);
@@ -244,12 +247,12 @@ export default function PostCard({
             {/* Post Header */}
             <div className="p-3.5 flex justify-between items-center border-b border-neutral-100">
                 <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                    {!vendorName || vendorName === "Loading..." ? (
-                        <div className="flex items-center gap-2.5 w-full animate-pulse">
-                            <div className="w-9 h-9 rounded-full bg-neutral-200" />
+                    {isLoadingVendor ? (
+                        <div className="flex items-center gap-2.5 w-full">
+                            <div className="w-9 h-9 rounded-full bg-neutral-100 animate-pulse" />
                             <div className="flex flex-col gap-1 flex-1">
-                                <div className="w-24 h-3.5 bg-neutral-200 rounded" />
-                                <div className="w-16 h-2 bg-neutral-200 rounded" />
+                                <div className="w-24 h-3.5 bg-neutral-100 rounded animate-pulse" />
+                                <div className="w-16 h-2.5 bg-neutral-100 rounded animate-pulse" />
                             </div>
                         </div>
                     ) : (

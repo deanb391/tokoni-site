@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProducts } from '@/context/ProductsContext';
 import ProductCard from '@/components/ProductCard';
-import { Search, Loader2, Sparkles, Star, Award, Bookmark, ArrowRight, Grid } from 'lucide-react';
+import { Search, Loader2, Sparkles, Star, Award, Bookmark, ArrowRight, Grid, X } from 'lucide-react';
 
 const BRAND_RED = "#B9001B";
 
@@ -48,6 +48,12 @@ export default function ExploreProductsScreen() {
                     subtitle: 'Featured items from our top partners',
                     icon: <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
                 };
+            case 'recommended':
+                return {
+                    title: 'Recommended For You',
+                    subtitle: 'Tailored recommendations based on your activity',
+                    icon: <Bookmark className="w-5 h-5 text-rose-500 fill-rose-500" />
+                };
             case 'new':
                 return {
                     title: 'New Arrivals',
@@ -88,7 +94,7 @@ export default function ExploreProductsScreen() {
                     position: 'relative',
                     width: '100%',
                     maxWidth: '600px',
-                    marginBottom: '2.5rem',
+                    margin: '0 auto 2.5rem auto',
                     boxShadow: '0 4px 15px rgba(0,0,0,0.02)',
                     borderRadius: '30px'
                 }}>
@@ -108,7 +114,7 @@ export default function ExploreProductsScreen() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={{
                             width: '100%',
-                            padding: '13px 20px 13px 46px',
+                            padding: searchQuery ? '13px 46px 13px 46px' : '13px 20px 13px 46px',
                             borderRadius: '30px',
                             border: '1px solid #E5E7EB',
                             fontSize: '13.5px',
@@ -121,6 +127,31 @@ export default function ExploreProductsScreen() {
                         onFocus={(e) => e.target.style.borderColor = BRAND_RED}
                         onBlur={(e) => e.target.style.borderColor = '#E5E7EB'}
                     />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery("")}
+                            style={{
+                                position: 'absolute',
+                                right: '18px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: '#9CA3AF',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '4px',
+                                borderRadius: '50%',
+                                transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    )}
                 </div>
 
                 {/* Categories Pills */}
@@ -330,7 +361,7 @@ export default function ExploreProductsScreen() {
                                                         boxSizing: 'border-box'
                                                     }}
                                                 >
-                                                    <ProductCard product={prod} />
+                                                    <ProductCard product={prod} hideCart={true} />
                                                 </div>
                                             ))}
 

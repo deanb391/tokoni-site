@@ -81,3 +81,39 @@ export async function getVendorById(vendorId: string): Promise<Vendor> {
   const data = await res.json();
   return data.data;
 }
+
+export async function getGlobalVendors(
+  limit = 10,
+  offset = 0,
+  search?: string,
+  sortByFollowers = false,
+  newOnly = false
+): Promise<{ vendors: Vendor[]; hasMore: boolean; nextOffset: number }> {
+  let url = `/api/vendors/list?limit=${limit}&offset=${offset}`;
+  if (search) {
+    url += `&search=${encodeURIComponent(search)}`;
+  }
+  if (sortByFollowers) {
+    url += `&sortByFollowers=true`;
+  }
+  if (newOnly) {
+    url += `&newOnly=true`;
+  }
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: jsonHeaders,
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to fetch vendors");
+  }
+
+  const data = await res.json();
+  return {
+    vendors: data.vendors || [],
+    hasMore: data.hasMore || false,
+    nextOffset: data.nextOffset || 0,
+  };
+}

@@ -25,7 +25,7 @@ interface FeedContextType {
   toggleSaveCount: (postId: string, isSaved: boolean) => void;
   refreshFeed: () => Promise<void>;
   fetchNextBatch: (limit?: number) => Promise<void>;
-  initializeReels: (postId: string) => Promise<void>;
+  initializeReels: (postId: string, preloadedPost?: Post) => Promise<void>;
 }
 
 const FeedContext = createContext<FeedContextType | undefined>(undefined);
@@ -178,35 +178,47 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const initializeReels = async (postId: string) => {
-    setLoading(true);
+  const initializeReels = async (postId: string, preloadedPost?: Post) => {
+    // If we have a preloaded post, populate the feed list immediately to open the overlay instantly
+    if (preloadedPost) {
+      setPosts([preloadedPost]);
+      setExpandedPostIndex(0);
+      setHighestViewedIndexState(0);
+      resolveMetadataForPosts([preloadedPost]);
+    }
+
     try {
-      // 1. Fetch the target post details
-      const resPost = await fetch(`/api/posts/list?ids=${encodeURIComponent(postId)}`).then(r => r.json());
-      const targetPost = resPost.posts?.[0];
-      if (!targetPost) return;
+      let targetPost = preloadedPost;
 
-      // Resolve metadata for target post
-      resolveMetadataForPosts([targetPost]);
+      // If no preloaded post was provided, fetch it first (blocking)
+      if (!targetPost) {
+        setLoading(true);
+        const resPost = await fetch(`/api/posts/list?ids=${encodeURIComponent(postId)}`).then(r => r.json());
+        targetPost = resPost.posts?.[0];
+        if (!targetPost) return;
 
-      // 2. Fetch more posts using Reels algorithm (exclude current postId if possible)
+        resolveMetadataForPosts([targetPost]);
+        setPosts([targetPost]);
+        setExpandedPostIndex(0);
+        setHighestViewedIndexState(0);
+      }
+
+      // Fetch the remaining reels queue asynchronously in the background
       const keywords = getTopKeywords();
       const userId = user?.$id || "";
       const url = `/api/posts/feed?type=reels&limit=10&offset=0&keywords=${encodeURIComponent(keywords.join(","))}&userId=${encodeURIComponent(userId)}`;
       const resFeed = await fetch(url).then(r => r.json());
       
       let feedPosts = resFeed.success ? resFeed.posts : [];
-      // Filter out the target post if it is returned
-      feedPosts = feedPosts.filter((p: Post) => p.$id !== targetPost.$id);
-
-      const combined = [targetPost, ...feedPosts];
-      setPosts(combined);
-      setOffset(combined.length);
-      setHasMore(resFeed.hasMore || false);
-      setExpandedPostIndex(0);
-      setHighestViewedIndexState(0);
-      
-      resolveMetadataForPosts(feedPosts);
+      // Filter out the target post
+      if (targetPost) {
+        feedPosts = feedPosts.filter((p: Post) => p.$id !== targetPost.$id);
+        const combined = [targetPost, ...feedPosts];
+        setPosts(combined);
+        setOffset(combined.length);
+        setHasMore(resFeed.hasMore || false);
+        resolveMetadataForPosts(feedPosts);
+      }
     } catch (err) {
       console.error("Error initializing reels queue:", err);
     } finally {

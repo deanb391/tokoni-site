@@ -6,6 +6,7 @@ import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 import PostCard from "@/components/PostCard";
 import ExpandedPostContainer from "@/components/ExpandedPostContainer";
+import ReelsTray from "@/components/ReelsTray";
 import { Loader2, Compass, Sparkles } from "lucide-react";
 
 // Native IntersectionObserver wrapper to notify the context when a card is visible
@@ -120,21 +121,24 @@ export default function FeedScreen() {
           </div>
         ) : (
           posts.map((post, idx) => (
-            <VisibilityTracker
-              key={post.$id}
-              index={idx}
-              onChange={setHighestViewedIndex}
-            >
-              <PostCard
-                post={post}
-                vendorName={vendorsMap[post.vendor]?.businessName || "Tokoni Store"}
-                vendorLogo={vendorsMap[post.vendor]?.logoImage}
-                taggedProductsMap={productsMap}
-                onLikeToggle={() => toggleLike(post.$id)}
-                currentUserId={user?.$id}
-                onMediaClick={() => setExpandedPostIndex(idx)}
-              />
-            </VisibilityTracker>
+            <React.Fragment key={post.$id}>
+              <VisibilityTracker
+                index={idx}
+                onChange={setHighestViewedIndex}
+              >
+                <PostCard
+                  post={post}
+                  vendorName={vendorsMap[post.vendor]?.businessName || "Tokoni Store"}
+                  vendorLogo={vendorsMap[post.vendor]?.logoImage}
+                  taggedProductsMap={productsMap}
+                  onLikeToggle={() => toggleLike(post.$id)}
+                  currentUserId={user?.$id}
+                  onMediaClick={() => setExpandedPostIndex(idx)}
+                />
+              </VisibilityTracker>
+
+              {idx === 0 && <ReelsTray />}
+            </React.Fragment>
           ))
         )}
 
