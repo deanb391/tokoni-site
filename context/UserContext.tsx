@@ -24,6 +24,8 @@ type User = {
   following?: string[];
   savedPosts?: string[];
   savedProducts?: string[];
+  pushNotifications?: boolean;
+  emailNotifications?: boolean;
 };
 
 type UserContextType = {

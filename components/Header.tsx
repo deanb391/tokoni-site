@@ -407,7 +407,8 @@ export default function Header() {
                 height: '40px',
                 borderRadius: '50%',
                 boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                WebkitTapHighlightColor: 'transparent'
+                WebkitTapHighlightColor: 'transparent',
+                position: 'relative'
               }}
             >
               {/* Using a custom, elegant SVG for the hamburger menu */}
@@ -416,6 +417,18 @@ export default function Header() {
                 <line x1="3" y1="6" x2="21" y2="6"></line>
                 <line x1="3" y1="18" x2="15" y2="18"></line>
               </svg>
+              {unreadCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  width: '8px',
+                  height: '8px',
+                  backgroundColor: BRAND_RED,
+                  borderRadius: '50%',
+                  border: '2px solid #ffffff'
+                }} />
+              )}
             </button>
           </div>
         )}
