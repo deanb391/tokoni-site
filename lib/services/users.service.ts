@@ -14,6 +14,9 @@ export type UserProfile = {
   following: string[];
   savedPosts: string[];
   savedProducts: string[];
+  pushNotifications?: boolean;
+  emailNotifications?: boolean;
+  lastMessageEmailAt?: string;
   $createdAt: string;
   $updatedAt: string;
 };
@@ -55,6 +58,9 @@ export function mapUserDoc(doc: any): UserProfile {
     following,
     savedPosts,
     savedProducts,
+    pushNotifications: doc.pushNotifications !== undefined ? !!doc.pushNotifications : true,
+    emailNotifications: doc.emailNotifications !== undefined ? !!doc.emailNotifications : true,
+    lastMessageEmailAt: doc.lastMessageEmailAt || "",
     $createdAt: doc.$createdAt,
     $updatedAt: doc.$updatedAt,
   };
@@ -91,6 +97,42 @@ export async function toggleFollowVendorService(userId: string, vendorId: string
   const updated = await databases.updateDocument(DATABASE_ID, USER_COLLECTION, userId, {
     following: JSON.stringify(following),
   });
+
+  // Trigger follow notification & email if this is a new follow action
+  if (!isFollowing) {
+    try {
+      // 1. Fetch vendor document
+      const vendorDoc = await databases.getDocument(DATABASE_ID, "vendor", vendorId);
+      const vendorUserId = vendorDoc.users;
+      
+      if (vendorUserId && vendorUserId !== userId) {
+        // 2. Fetch vendor's user profile
+        const vendorUserDoc = await databases.getDocument(DATABASE_ID, USER_COLLECTION, vendorUserId);
+        
+        // 3. Create in-app notification
+        const followerName = doc.username || "A user";
+        const { createNotificationService } = await import("@/lib/services/notifications.service");
+        await createNotificationService({
+          userId: vendorUserId,
+          senderId: userId,
+          type: "follower",
+          title: "New Follower",
+          message: `${followerName} started following your store!`,
+          link: `/profile/${userId}`,
+        }).catch(console.error);
+
+        // 4. Send email if enabled
+        const emailNotificationsEnabled = vendorUserDoc.emailNotifications !== false;
+        if (emailNotificationsEnabled && vendorUserDoc.email) {
+          const { sendNewFollowerEmail } = await import("@/lib/email/events");
+          const businessName = vendorDoc.businessName || vendorUserDoc.username || "Vendor";
+          await sendNewFollowerEmail(vendorUserDoc.email, businessName, followerName).catch(console.error);
+        }
+      }
+    } catch (err) {
+      console.error("Error triggering follow notifications/emails:", err);
+    }
+  }
 
   return mapUserDoc(updated);
 }

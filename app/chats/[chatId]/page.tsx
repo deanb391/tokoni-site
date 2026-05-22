@@ -12,6 +12,7 @@ import { getMyVendor } from "@/lib/api/vendors";
 import { getCart, clearCart } from "@/lib/utils/cart";
 import CartDrawer from "@/components/CartDrawer";
 import { ShoppingBag, Search } from "lucide-react";
+import NotificationOptInModal from "@/components/chats/NotificationOptInModal";
 
 // --- Inline SVGs for Icons ---
 const PhoneIcon = ({ color = "#111" }) => (
@@ -348,6 +349,9 @@ export default function ChatDetailPage() {
             // Format and send message
             const cartMessageText = "__TOKONI_CART__:" + JSON.stringify(cartItems);
             await sendTextMessage(cartMessageText);
+            import("@/lib/api/admin").then(({ logActivity }) => {
+              logActivity("cart_sent", vendorIdParam);
+            }).catch(e => console.error(e));
           } catch (err) {
             console.error("Failed to send cart message:", err);
           }
@@ -1913,6 +1917,9 @@ export default function ChatDetailPage() {
             isReadOnly={true}
             title="Shared Cart"
           />
+
+          {/* Browser Notification Permission Opt-in Prompt */}
+          <NotificationOptInModal />
 
         </div>
       </div>

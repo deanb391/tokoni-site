@@ -138,6 +138,9 @@ export default function CommentDrawer({
         if (!newComment.users || typeof newComment.users === "object") {
           newComment.users = user.$id;
         }
+        import("@/lib/api/admin").then(({ logActivity }) => {
+          logActivity("post_engage", postId);
+        }).catch(e => console.error(e));
       }
 
       // Prepend current user profile to cache

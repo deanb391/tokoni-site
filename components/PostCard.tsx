@@ -9,13 +9,13 @@ import CommentDrawer from "@/components/CommentDrawer";
 import { useUser } from "@/context/UserContext";
 import { useFeed } from "@/context/FeedContext";
 import { toggleFollowVendor, toggleSavePost } from "@/lib/api/users";
-import { getVendorById } from "@/lib/api/vendors";
 import { trackPostLikeKeywords } from "@/lib/utils/keywordTracker";
 
 interface PostCardProps {
     post: Post;
     vendorName: string;
     vendorLogo?: string;
+    vendorUserId?: string | null;
     taggedProductsMap: Record<string, Product>;
     onLikeToggle?: (postId: string) => void;
     currentUserId?: string;
@@ -34,6 +34,7 @@ export default function PostCard({
     post,
     vendorName,
     vendorLogo,
+    vendorUserId: vendorUserIdProp,
     taggedProductsMap,
     onLikeToggle,
     currentUserId,
@@ -60,35 +61,14 @@ export default function PostCard({
     const [saveLoading, setSaveLoading] = useState(false);
     const [videoLoading, setVideoLoading] = useState(true);
     const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
-    const [vendorUserId, setVendorUserId] = useState<string | null>(null);
-
     const vendorId = typeof post.vendor === "string" ? post.vendor : (post.vendor as any)?.$id || "";
+    const vendorUserId = vendorUserIdProp || (typeof post.vendor === "object" && post.vendor ? (post.vendor as any).users : null) || (vendorId?.startsWith("mock-vendor-") ? "mock-user-id" : null);
+
     const isFollowing = user?.following?.includes(vendorId) || false;
     const isSaved = user?.savedPosts?.includes(post.$id) || false;
 
     const videoRef = useRef<HTMLVideoElement>(null);
     let particleIdRef = useRef(0);
-
-    useEffect(() => {
-        if (!vendorId) return;
-        if (vendorId.startsWith("mock-vendor-")) {
-            setVendorUserId("mock-user-id");
-            return;
-        }
-
-        let isMounted = true;
-        const loadVendorUser = async () => {
-            try {
-                const vendorData = await getVendorById(vendorId);
-                if (vendorData && isMounted) setVendorUserId(vendorData.users);
-            } catch (err) {
-                console.error("Failed to load vendor user ID in PostCard:", err);
-            }
-        };
-
-        loadVendorUser();
-        return () => { isMounted = false; };
-    }, [vendorId]);
 
     useEffect(() => {
         const videoEl = videoRef.current;
@@ -116,6 +96,43 @@ export default function PostCard({
         observer.observe(videoEl);
         return () => observer.disconnect();
     }, [post.type, expandedPostIndex]);
+
+    useEffect(() => {
+        const videoEl = videoRef.current;
+        if (!videoEl || post.type !== "video") return;
+
+        let playStartTime = 0;
+        let totalWatchedThisSession = 0;
+
+        const onPlay = () => {
+            playStartTime = Date.now();
+        };
+
+        const onPause = () => {
+            if (playStartTime > 0) {
+                const duration = (Date.now() - playStartTime) / 1000;
+                totalWatchedThisSession += duration;
+                playStartTime = 0;
+            }
+        };
+
+        videoEl.addEventListener("play", onPlay);
+        videoEl.addEventListener("pause", onPause);
+
+        return () => {
+            videoEl.removeEventListener("play", onPlay);
+            videoEl.removeEventListener("pause", onPause);
+            if (playStartTime > 0) {
+                const duration = (Date.now() - playStartTime) / 1000;
+                totalWatchedThisSession += duration;
+            }
+            if (totalWatchedThisSession >= 3) {
+                import("@/lib/api/admin").then(({ logActivity }) => {
+                    logActivity("video_watch", post.$id, totalWatchedThisSession);
+                }).catch(e => console.error(e));
+            }
+        };
+    }, [post.type, post.$id]);
 
     useEffect(() => {
         setIsLiked(currentUserId ? post.likedBy.includes(currentUserId) : false);
@@ -199,6 +216,9 @@ export default function PostCard({
         if (newIsLiked) {
             spawnHeartParticles();
             trackPostLikeKeywords(post.caption);
+            import("@/lib/api/admin").then(({ logActivity }) => {
+                logActivity("post_engage", post.$id);
+            }).catch(e => console.error(e));
         }
         if (onLikeToggle) onLikeToggle(post.$id);
     };
@@ -218,6 +238,10 @@ export default function PostCard({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ postId: post.$id })
         }).catch(err => console.error("Error logging share:", err));
+
+        import("@/lib/api/admin").then(({ logActivity }) => {
+            logActivity("post_engage", post.$id);
+        }).catch(e => console.error(e));
     };
 
     const firstTaggedProduct = post.taggedProducts.length > 0 ? taggedProductsMap[post.taggedProducts[0]] : null;
@@ -297,15 +321,29 @@ export default function PostCard({
             </div>
 
             {/* Media Slider */}
-            <div onClick={onMediaClick} className="relative aspect-square bg-neutral-950 flex items-center justify-center overflow-hidden group cursor-pointer">
+            <div 
+                onClick={() => {
+                    if (videoRef.current) {
+                        videoRef.current.pause();
+                    }
+                    onMediaClick?.();
+                }}
+                className="relative aspect-square bg-neutral-950 flex items-center justify-center overflow-hidden group cursor-pointer"
+            >
                 {post.type === 'video' ? (
                     <>
                         <video
                             ref={videoRef}
                             src={post.media[0]}
+                            preload="metadata"
                             controls
                             loop
                             playsInline
+                            onPlay={(e) => {
+                                if (expandedPostIndex !== null) {
+                                    e.currentTarget.pause();
+                                }
+                            }}
                             onWaiting={() => setVideoLoading(true)}
                             onPlaying={() => setVideoLoading(false)}
                             onLoadStart={() => setVideoLoading(true)}

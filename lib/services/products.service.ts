@@ -88,6 +88,16 @@ export async function createProductService(
     payload
   );
 
+  // Notify followers
+  try {
+    const { notifyFollowersOfNewContent } = await import("@/lib/services/notifications.service");
+    notifyFollowersOfNewContent(vendor, "product", draft.name, "/feed").catch(
+      (err) => console.error("Error notifying followers of new product:", err)
+    );
+  } catch (err) {
+    console.error("Failed to import notifications service:", err);
+  }
+
   return mapProduct(doc);
 }
 

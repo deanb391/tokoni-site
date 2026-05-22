@@ -98,6 +98,12 @@ const TrashIcon = ({ color = "#B9001B" }) => (
     </svg>
 );
 
+const ShieldIcon = ({ color = "#B9001B" }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+    </svg>
+);
+
 const BackIcon = ({ color = "#111" }) => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -112,7 +118,7 @@ export default function MenuScreen() {
     const [isMobile, setIsMobile] = useState(false);
 
     // View state
-    const [currentView, setCurrentView] = useState<'menu' | 'account' | 'change-password' | 'settings'>('menu');
+    const [currentView, setCurrentView] = useState<'menu' | 'account' | 'change-password' | 'settings' | 'notifications'>('menu');
 
     // UI Toast feedback
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -136,11 +142,102 @@ export default function MenuScreen() {
     const [deactivatePassword, setDeactivatePassword] = useState('');
     const [deactivating, setDeactivating] = useState(false);
 
-    // Settings panel simulated states
+    // Settings panel states
     const [pushEnabled, setPushEnabled] = useState(true);
     const [emailEnabled, setEmailEnabled] = useState(true);
     const [darkMode, setDarkMode] = useState(false);
     const [currency, setCurrency] = useState('NGN');
+
+    // Notifications history states
+    const [notifications, setNotifications] = useState<any[]>([]);
+    const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+    // Sync notification preferences from user object when loaded
+    useEffect(() => {
+        if (user) {
+            setPushEnabled(user.pushNotifications !== false);
+            setEmailEnabled(user.emailNotifications !== false);
+        }
+    }, [user]);
+
+    // Fetch user notifications when notifications view is active
+    useEffect(() => {
+        if (currentView === 'notifications' && user?.$id) {
+            const fetchNotifications = async () => {
+                setLoadingNotifications(true);
+                try {
+                    const res = await fetch(`/api/notifications?userId=${user.$id}`);
+                    const data = await res.json();
+                    if (data.success) {
+                        setNotifications(data.data || []);
+                    }
+                } catch (err) {
+                    console.error("Error loading notifications:", err);
+                } finally {
+                    setLoadingNotifications(false);
+                }
+            };
+            fetchNotifications();
+        }
+    }, [currentView, user]);
+
+    const handleTogglePush = async (newValue: boolean) => {
+        setPushEnabled(newValue);
+        if (!user?.$id) return;
+        try {
+            const res = await fetch("/api/users/update-settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: user.$id, pushNotifications: newValue }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || "Failed to update settings");
+            }
+            refreshUser();
+        } catch (err) {
+            console.error("Failed to update push notifications toggle:", err);
+            showToast("Failed to update settings", "error");
+            setPushEnabled(!newValue);
+        }
+    };
+
+    const handleToggleEmail = async (newValue: boolean) => {
+        setEmailEnabled(newValue);
+        if (!user?.$id) return;
+        try {
+            const res = await fetch("/api/users/update-settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: user.$id, emailNotifications: newValue }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || "Failed to update settings");
+            }
+            refreshUser();
+        } catch (err) {
+            console.error("Failed to update email notifications toggle:", err);
+            showToast("Failed to update settings", "error");
+            setEmailEnabled(!newValue);
+        }
+    };
+
+    const handleMarkNotificationRead = async (notificationId: string) => {
+        try {
+            const res = await fetch("/api/notifications", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ notificationId }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setNotifications(prev => prev.map(n => n.$id === notificationId ? { ...n, read: true } : n));
+            }
+        } catch (err) {
+            console.error("Error marking notification read:", err);
+        }
+    };
 
     useEffect(() => {
         setMounted(true);
@@ -577,12 +674,40 @@ export default function MenuScreen() {
                                         Become a Vendor
                                     </span>
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Admin Dashboard */}
+                        {user?.isAdmin && (
+                            <div
+                                onClick={() => router.push('/admin')}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    padding: '1.15rem 1.5rem',
+                                    borderBottom: '1px solid #F3F4F6',
+                                    cursor: 'pointer',
+                                    transition: 'background-color 0.2s',
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#FAFAFA'}
+                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#FFF0F2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <ShieldIcon />
+                                    </div>
+                                    <span style={{ fontSize: '15px', fontWeight: '600', color: BRAND_RED }}>
+                                        Admin Dashboard
+                                    </span>
+                                </div>
                                 <ChevronRightIcon color={BRAND_RED} />
                             </div>
                         )}
 
                         {/* 4. Notifications */}
-                        {/* <div
+                        <div
+                            onClick={() => setCurrentView('notifications')}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -596,15 +721,27 @@ export default function MenuScreen() {
                             onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#FFF0F2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#FFF0F2', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                                     <BellIcon />
+                                    {notifications.some(n => !n.read) && (
+                                        <span style={{
+                                            position: 'absolute',
+                                            top: '0',
+                                            right: '0',
+                                            width: '10px',
+                                            height: '10px',
+                                            borderRadius: '50%',
+                                            backgroundColor: BRAND_RED,
+                                            border: '2px solid #ffffff'
+                                        }} />
+                                    )}
                                 </div>
                                 <span style={{ fontSize: '15px', fontWeight: '500', color: '#111111' }}>
                                     Notifications
                                 </span>
                             </div>
                             <ChevronRightIcon />
-                        </div> */}
+                        </div>
 
                         {/* 5. Settings & Privacy */}
                         <div
@@ -995,7 +1132,7 @@ export default function MenuScreen() {
                                         id="push-toggle"
                                         className="toggle-checkbox"
                                         checked={pushEnabled}
-                                        onChange={() => setPushEnabled(!pushEnabled)}
+                                        onChange={() => handleTogglePush(!pushEnabled)}
                                         style={{ opacity: 0, width: 0, height: 0 }}
                                     />
                                     <label
@@ -1030,7 +1167,7 @@ export default function MenuScreen() {
                                         type="checkbox"
                                         id="email-toggle"
                                         checked={emailEnabled}
-                                        onChange={() => setEmailEnabled(!emailEnabled)}
+                                        onChange={() => handleToggleEmail(!emailEnabled)}
                                         style={{ opacity: 0, width: 0, height: 0 }}
                                     />
                                     <label
@@ -1132,6 +1269,177 @@ export default function MenuScreen() {
                             </div>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* SCREEN 5: NOTIFICATIONS HISTORY VIEW */}
+            {currentView === 'notifications' && (
+                <div className="fade-in" style={{ maxWidth: '650px', margin: '2rem auto 0', padding: '0 1.5rem 5rem' }}>
+                    {/* Header bar */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <button
+                                onClick={() => setCurrentView('menu')}
+                                style={{
+                                    border: '1px solid #e5e7eb',
+                                    backgroundColor: '#ffffff',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                }}
+                            >
+                                <BackIcon />
+                            </button>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#111827', margin: 0 }}>Notification History</h2>
+                        </div>
+                        {notifications.some(n => !n.read) && (
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const unread = notifications.filter(n => !n.read);
+                                        await Promise.all(unread.map(n => 
+                                            fetch("/api/notifications", {
+                                                method: "POST",
+                                                headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({ notificationId: n.$id }),
+                                            })
+                                        ));
+                                        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                                    } catch (err) {
+                                        console.error("Failed to mark all as read:", err);
+                                    }
+                                }}
+                                style={{
+                                    border: 'none',
+                                    backgroundColor: 'transparent',
+                                    color: BRAND_RED,
+                                    fontSize: '0.875rem',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Mark all as read
+                            </button>
+                        )}
+                    </div>
+
+                    {loadingNotifications ? (
+                        <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem 0' }}>
+                            <div className="spinner" style={{ width: '30px', height: '30px', border: '3px solid #f3f4f6', borderTopColor: BRAND_RED, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                        </div>
+                    ) : notifications.length === 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 2rem', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '20px', border: '1px solid #e5e7eb' }}>
+                            <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: '#FFF0F2', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem' }}>
+                                <BellIcon color={BRAND_RED} />
+                            </div>
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#111827', margin: '0 0 4px 0' }}>All caught up!</h3>
+                            <p style={{ fontSize: '0.9rem', color: '#6b7280', margin: 0 }}>You don't have any notifications at the moment.</p>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {notifications.map((n) => {
+                                const isUnread = !n.read;
+                                // Helper to format time elapsed
+                                const formatTimeElapsed = (isoString: string) => {
+                                    if (!isoString) return '';
+                                    const now = new Date();
+                                    const then = new Date(isoString);
+                                    const diffMs = now.getTime() - then.getTime();
+                                    const diffMins = Math.floor(diffMs / (60 * 1000));
+                                    const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
+                                    const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+
+                                    if (diffMins < 1) return 'Just now';
+                                    if (diffMins < 60) return `${diffMins}m ago`;
+                                    if (diffHours < 24) return `${diffHours}h ago`;
+                                    return `${diffDays}d ago`;
+                                };
+
+                                return (
+                                    <div
+                                        key={n.$id}
+                                        onClick={async () => {
+                                            if (isUnread) {
+                                                await handleMarkNotificationRead(n.$id);
+                                            }
+                                            if (n.link) {
+                                                router.push(n.link);
+                                            }
+                                        }}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '1.25rem',
+                                            borderRadius: '16px',
+                                            backgroundColor: isUnread ? '#FFF8F8' : '#ffffff',
+                                            border: isUnread ? `1px solid ${BRAND_RED}22` : '1px solid #e5e7eb',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            boxShadow: isUnread ? '0 4px 12px rgba(185, 0, 27, 0.03)' : '0 2px 8px rgba(0,0,0,0.01)'
+                                        }}
+                                        onMouseOver={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(-2px)';
+                                            e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.04)';
+                                        }}
+                                        onMouseOut={(e) => {
+                                            e.currentTarget.style.transform = 'translateY(0)';
+                                            e.currentTarget.style.boxShadow = isUnread ? '0 4px 12px rgba(185, 0, 27, 0.03)' : '0 2px 8px rgba(0,0,0,0.01)';
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
+                                            <div style={{
+                                                width: '44px',
+                                                height: '44px',
+                                                borderRadius: '50%',
+                                                backgroundColor: n.type === 'follower' ? '#EBF5FF' : n.type?.includes('upload') ? '#F0FDF4' : '#FFF0F2',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0
+                                            }}>
+                                                {n.type === 'follower' ? (
+                                                    <UserIcon color="#2563EB" />
+                                                ) : n.type?.includes('upload') ? (
+                                                    <StoreIcon color="#16A34A" />
+                                                ) : (
+                                                    <BellIcon color={BRAND_RED} />
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <span style={{ fontSize: '0.95rem', fontWeight: isUnread ? '700' : '600', color: '#111827' }}>
+                                                        {n.title}
+                                                    </span>
+                                                    <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                                                        {formatTimeElapsed(n.$createdAt)}
+                                                    </span>
+                                                </div>
+                                                <span style={{ fontSize: '0.85rem', color: '#4b5563', lineHeight: '1.4' }}>
+                                                    {n.message}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {isUnread && (
+                                            <div style={{
+                                                width: '8px',
+                                                height: '8px',
+                                                borderRadius: '50%',
+                                                backgroundColor: BRAND_RED,
+                                                marginLeft: '12px',
+                                                flexShrink: 0
+                                            }} />
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
 

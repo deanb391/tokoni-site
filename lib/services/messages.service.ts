@@ -115,9 +115,88 @@ export async function createMessageService(draft: MessageDraft): Promise<Message
   }
 
   // Update chat last message asynchronously
-  updateChatLastMessageService(draft.chatId, previewText, draft.senderId, status).catch((err) => {
-    console.error("Failed to update chat last message in createMessageService:", err);
-  });
+  updateChatLastMessageService(draft.chatId, previewText, draft.senderId, status)
+    .then(async () => {
+      // Trigger offline check & rate-limited email digest
+      try {
+        const chatDoc = await databases.getDocument(DATABASE_ID, "chat", draft.chatId);
+        const participants = Array.isArray(chatDoc.participants)
+          ? chatDoc.participants
+          : JSON.parse(chatDoc.participants || "[]");
+
+        const recipientId = participants.find((p: string) => p !== draft.senderId);
+        if (!recipientId) return;
+
+        // Fetch recipient user details
+        const recipientDoc = await databases.getDocument(DATABASE_ID, "users", recipientId);
+        const lastTime = recipientDoc.lastTime;
+        const isOffline = !lastTime || (new Date().getTime() - new Date(lastTime).getTime() > 5 * 60 * 1000);
+
+        if (isOffline && recipientDoc.emailNotifications !== false && recipientDoc.email) {
+          const lastEmailAt = recipientDoc.lastMessageEmailAt;
+          const nowMs = new Date().getTime();
+          const isThrottled = lastEmailAt && (nowMs - new Date(lastEmailAt).getTime() < 15 * 60 * 1000); // 15 mins rate-limit
+
+          if (!isThrottled) {
+            const { getChatsForUserService } = await import("@/lib/services/chats.service");
+            const userChats = await getChatsForUserService(recipientId);
+
+            let totalUnreads = 0;
+            const senderNames = new Set<string>();
+
+            for (const c of userChats) {
+              const uCounts = c.unreadCounts || {};
+              const chatUnread = uCounts[recipientId] || 0;
+              if (chatUnread > 0) {
+                totalUnreads += chatUnread;
+
+                const otherId = c.participants.find((p) => p !== recipientId);
+                if (otherId) {
+                  try {
+                    const otherDoc = await databases.getDocument(DATABASE_ID, "users", otherId);
+                    if (otherDoc.username) {
+                      senderNames.add(otherDoc.username);
+                    }
+                  } catch {}
+                }
+              }
+            }
+
+            if (totalUnreads > 0) {
+              // Update lastMessageEmailAt to prevent spamming
+              await databases.updateDocument(DATABASE_ID, "users", recipientId, {
+                lastMessageEmailAt: new Date().toISOString(),
+              });
+
+              const sendersList = Array.from(senderNames);
+              if (sendersList.length === 0) {
+                try {
+                  const senderDoc = await databases.getDocument(DATABASE_ID, "users", draft.senderId);
+                  sendersList.push(senderDoc.username || "A user");
+                } catch {
+                  sendersList.push("A user");
+                }
+              }
+
+              const { sendChatMessageDigestEmail } = await import("@/lib/email/events");
+              const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
+              await sendChatMessageDigestEmail(recipientDoc.email, {
+                recipientName: recipientDoc.username || "User",
+                senders: sendersList,
+                lastMessageSnippet: previewText,
+                chatLink: `${baseUrl}/chats`,
+              }).catch(console.error);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Offline message email dispatcher error:", err);
+      }
+    })
+    .catch((err) => {
+      console.error("Failed to update chat last message in createMessageService:", err);
+    });
 
   return message;
 }

@@ -123,6 +123,16 @@ export async function createPostService(
     payload
   );
 
+  // Notify followers
+  try {
+    const { notifyFollowersOfNewContent } = await import("@/lib/services/notifications.service");
+    notifyFollowersOfNewContent(vendor, "post", draft.caption || "New Post/Reel", "/feed").catch(
+      (err) => console.error("Error notifying followers of new post:", err)
+    );
+  } catch (err) {
+    console.error("Failed to import notifications service:", err);
+  }
+
   return mapPost(doc);
 }
 
@@ -194,6 +204,55 @@ export async function toggleLikePostService(
   );
 
   const updatedPost = mapPost(updatedDoc);
+
+  // Trigger alerts if this was a new like (not an unlike)
+  if (!isLiked) {
+    try {
+      const vendorId = updatedPost.vendor;
+      if (vendorId) {
+        const vendorDoc = await databases.getDocument(DATABASE_ID, "vendor", vendorId);
+        const vendorUserId = vendorDoc.users;
+        if (vendorUserId && vendorUserId !== userId) {
+          const likerDoc = await databases.getDocument(DATABASE_ID, "users", userId);
+          const likerName = likerDoc.username || "A user";
+
+          // Create in-app notification
+          const { createNotificationService } = await import("@/lib/services/notifications.service");
+          await createNotificationService({
+            userId: vendorUserId,
+            senderId: userId,
+            type: "post_engagement",
+            title: "New Like",
+            message: `${likerName} liked your post!`,
+            link: "/feed",
+          }).catch(console.error);
+
+          // Grouping logic: send email on 1st like, and every 5th like thereafter
+          const newLikesCount = likedByList.length;
+          if (newLikesCount === 1 || newLikesCount % 5 === 0) {
+            const vendorUserDoc = await databases.getDocument(DATABASE_ID, "users", vendorUserId);
+            const emailNotificationsEnabled = vendorUserDoc.emailNotifications !== false;
+            if (emailNotificationsEnabled && vendorUserDoc.email) {
+              const { sendPostEngagementEmail } = await import("@/lib/email/events");
+              const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+              const businessName = vendorDoc.businessName || vendorUserDoc.username || "Vendor";
+              await sendPostEngagementEmail(vendorUserDoc.email, {
+                vendorName: businessName,
+                triggerUsername: likerName,
+                engagementType: "reaction",
+                postTitle: updatedPost.caption || "your reel",
+                unreadCount: newLikesCount,
+                linkUrl: `${baseUrl}/feed`,
+              }).catch(console.error);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error triggering like notification:", err);
+    }
+  }
+
   return {
     likes: updatedPost.likes,
     likedBy: updatedPost.likedBy,

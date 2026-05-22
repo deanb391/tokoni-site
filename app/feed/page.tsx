@@ -130,6 +130,7 @@ export default function FeedScreen() {
                   post={post}
                   vendorName={vendorsMap[post.vendor]?.businessName || "Tokoni Store"}
                   vendorLogo={vendorsMap[post.vendor]?.logoImage}
+                  vendorUserId={vendorsMap[post.vendor]?.users}
                   taggedProductsMap={productsMap}
                   onLikeToggle={() => toggleLike(post.$id)}
                   currentUserId={user?.$id}

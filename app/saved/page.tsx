@@ -405,6 +405,7 @@ export default function SavedItemsScreen() {
                                                 post={post}
                                                 vendorName={vendor?.businessName || 'Tokoni Vendor'}
                                                 vendorLogo={vendor?.logoImage || ''}
+                                                vendorUserId={vendor?.users}
                                                 taggedProductsMap={taggedProductsMap}
                                                 currentUserId={user.$id}
                                             />

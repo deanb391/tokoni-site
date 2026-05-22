@@ -190,6 +190,9 @@ export default function ProductDetailScreen() {
         addToCart(vendorInfo.$id, item);
         setCartItems(getCart(vendorInfo.$id));
         alert("Added to cart!");
+        import("@/lib/api/admin").then(({ logActivity }) => {
+            logActivity("product_engage", product.$id || slug);
+        }).catch(e => console.error(e));
     };
 
     const handleRemoveCartItem = (pId: string) => {
@@ -283,6 +286,9 @@ export default function ProductDetailScreen() {
                 if (MOCK_PRODUCTS[slug]) {
                     setProduct(MOCK_PRODUCTS[slug]);
                     trackProductViewKeywords(MOCK_PRODUCTS[slug].name, MOCK_PRODUCTS[slug].description);
+                    import("@/lib/api/admin").then(({ logActivity }) => {
+                        logActivity("product_engage", slug);
+                    }).catch(e => console.error(e));
                     setVendorInfo({
                         $id: MOCK_PRODUCTS[slug].vendor,
                         businessName: "Studio Audio Gear",
@@ -303,6 +309,9 @@ export default function ProductDetailScreen() {
                     }
                     setProduct(fetched);
                     trackProductViewKeywords(fetched.name, fetched.description);
+                    import("@/lib/api/admin").then(({ logActivity }) => {
+                        logActivity("product_engage", fetched.$id || slug);
+                    }).catch(e => console.error(e));
 
                     // Fetch vendor details
                     if (fetched.vendor && !fetched.vendor.startsWith("mock-vendor-")) {
@@ -368,6 +377,9 @@ export default function ProductDetailScreen() {
             newLikedBy = newLikedBy.filter(id => id !== user.$id);
         } else {
             newLikedBy.push(user.$id);
+            import("@/lib/api/admin").then(({ logActivity }) => {
+                logActivity("product_engage", product.$id || slug);
+            }).catch(e => console.error(e));
         }
 
         const optimisticProduct = {

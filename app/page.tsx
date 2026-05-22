@@ -47,6 +47,8 @@ export default function HomeFeedScreen() {
     const [hasMoreNew, setHasMoreNew] = useState(true);
     const [loadingNew, setLoadingNew] = useState(false);
 
+    const [loadingMessageVendorId, setLoadingMessageVendorId] = useState<string | null>(null);
+
     const fetchTopVendors = async (isMore = false) => {
         if (loadingTop) return;
         setLoadingTop(true);
@@ -106,12 +108,14 @@ export default function HomeFeedScreen() {
             alert("You cannot start a chat with yourself.");
             return;
         }
+        setLoadingMessageVendorId(vendor.$id);
         try {
             const chatId = await startChatWithUser(vendor.users);
             router.push(`/chats/${chatId}`);
         } catch (err) {
             console.error("Failed to start chat with vendor:", err);
             alert("Failed to start chat session. Please try again.");
+            setLoadingMessageVendorId(null);
         }
     };
 
@@ -278,16 +282,17 @@ export default function HomeFeedScreen() {
 
                             <button
                                 onClick={(e) => handleMessageVendor(e, vendor)}
+                                disabled={loadingMessageVendorId === vendor.$id}
                                 style={{
                                     width: '100%',
-                                    backgroundColor: '#111827',
+                                    backgroundColor: loadingMessageVendorId === vendor.$id ? '#4b5563' : '#111827',
                                     color: '#FFFFFF',
                                     border: 'none',
                                     borderRadius: '20px',
                                     padding: '9px 0',
                                     fontSize: '11.5px',
                                     fontWeight: '700',
-                                    cursor: 'pointer',
+                                    cursor: loadingMessageVendorId === vendor.$id ? 'not-allowed' : 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -295,11 +300,23 @@ export default function HomeFeedScreen() {
                                     transition: 'background-color 0.2s',
                                     boxSizing: 'border-box'
                                 }}
-                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1f2937'}
-                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#111827'}
+                                onMouseOver={(e) => {
+                                    if (loadingMessageVendorId !== vendor.$id) {
+                                        e.currentTarget.style.backgroundColor = '#1f2937';
+                                    }
+                                }}
+                                onMouseOut={(e) => {
+                                    if (loadingMessageVendorId !== vendor.$id) {
+                                        e.currentTarget.style.backgroundColor = '#111827';
+                                    }
+                                }}
                             >
-                                <MessageSquare style={{ width: "13px", height: "13px" }} />
-                                Message
+                                {loadingMessageVendorId === vendor.$id ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                    <MessageSquare style={{ width: "13px", height: "13px" }} />
+                                )}
+                                {loadingMessageVendorId === vendor.$id ? 'Connecting...' : 'Message'}
                             </button>
                         </div>
                     ))}
@@ -615,16 +632,17 @@ export default function HomeFeedScreen() {
                                                     </p>
                                                     <button
                                                         onClick={(e) => handleMessageVendor(e, vendor)}
+                                                        disabled={loadingMessageVendorId === vendor.$id}
                                                         style={{
                                                             width: '100%',
-                                                            backgroundColor: '#111827',
+                                                            backgroundColor: loadingMessageVendorId === vendor.$id ? '#4b5563' : '#111827',
                                                             color: '#FFFFFF',
                                                             border: 'none',
                                                             borderRadius: '20px',
                                                             padding: '8px 0',
                                                             fontSize: '11.5px',
                                                             fontWeight: '700',
-                                                            cursor: 'pointer',
+                                                            cursor: loadingMessageVendorId === vendor.$id ? 'not-allowed' : 'pointer',
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             justifyContent: 'center',
@@ -632,8 +650,12 @@ export default function HomeFeedScreen() {
                                                             boxSizing: 'border-box'
                                                         }}
                                                     >
-                                                        <MessageSquare style={{ width: "13px", height: "13px" }} />
-                                                        Message
+                                                        {loadingMessageVendorId === vendor.$id ? (
+                                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                        ) : (
+                                                            <MessageSquare style={{ width: "13px", height: "13px" }} />
+                                                        )}
+                                                        {loadingMessageVendorId === vendor.$id ? 'Connecting...' : 'Message'}
                                                     </button>
                                                 </div>
                                             ))}
@@ -664,6 +686,7 @@ export default function HomeFeedScreen() {
                                                              post={post}
                                                             vendorName={vendor?.businessName || 'Tokoni Vendor'}
                                                             vendorLogo={vendor?.logoImage || ''}
+                                                            vendorUserId={vendor?.users}
                                                             taggedProductsMap={taggedProductsMap}
                                                             currentUserId={user?.$id}
                                                             isLoadingVendor={!vendor}
@@ -747,6 +770,7 @@ export default function HomeFeedScreen() {
                                                                 post={item.data}
                                                                 vendorName={vendor?.businessName || 'Tokoni Vendor'}
                                                                 vendorLogo={vendor?.logoImage || ''}
+                                                                vendorUserId={vendor?.users}
                                                                 taggedProductsMap={taggedProductsMap}
                                                                 currentUserId={user?.$id}
                                                                 isLoadingVendor={!vendor}

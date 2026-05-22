@@ -84,10 +84,11 @@ export function HomeFeedProvider({ children }: { children: ReactNode }) {
   const fetchInitialData = async (searchVal: string) => {
     setLoading(true);
     try {
-      // Fetch products (limit 12 for good initial density)
-      const prodRes = await getGlobalProducts(12, undefined, undefined, searchVal || undefined);
-      // Fetch posts (limit 6)
-      const postRes = await getGlobalFeedPosts(6, undefined); 
+      // Fetch products and posts concurrently
+      const [prodRes, postRes] = await Promise.all([
+        getGlobalProducts(12, undefined, undefined, searchVal || undefined),
+        getGlobalFeedPosts(6, undefined)
+      ]);
 
       let filteredPosts = postRes.posts;
       if (searchVal) {
@@ -125,15 +126,16 @@ export function HomeFeedProvider({ children }: { children: ReactNode }) {
       trackSearchKeywords(searchQuery);
       setLoading(true);
       try {
-        // 1. Fetch matching products
-        const prodRes = await getGlobalProducts(12, undefined, undefined, searchQuery);
-        // 2. Fetch posts and filter client-side by caption
-        const postRes = await getGlobalFeedPosts(30, undefined);
+        // Fetch products, posts, and vendors concurrently
+        const [prodRes, postRes, vendorRes] = await Promise.all([
+          getGlobalProducts(12, undefined, undefined, searchQuery),
+          getGlobalFeedPosts(30, undefined),
+          getGlobalVendors(10, 0, searchQuery)
+        ]);
+
         const filteredPosts = postRes.posts.filter(p => 
           p.caption?.toLowerCase().includes(searchQuery.toLowerCase())
         );
-        // 3. Fetch matching vendors
-        const vendorRes = await getGlobalVendors(10, 0, searchQuery);
 
         setSearchedProducts(prodRes.products);
         setSearchedPosts(filteredPosts);
@@ -152,28 +154,28 @@ export function HomeFeedProvider({ children }: { children: ReactNode }) {
     if (loadingMore || (!hasMoreProducts && !hasMorePosts)) return;
     setLoadingMore(true);
     try {
-      let newProds: Product[] = [];
-      let newPosts: Post[] = [];
+      const [prodRes, postRes] = await Promise.all([
+        hasMoreProducts
+          ? getGlobalProducts(12, prodCursor, undefined, searchQuery || undefined)
+          : Promise.resolve({ products: [], nextCursor: prodCursor, hasMore: false }),
+        hasMorePosts
+          ? getGlobalFeedPosts(6, postCursor)
+          : Promise.resolve({ posts: [], nextCursor: postCursor, hasMore: false })
+      ]);
 
-      if (hasMoreProducts) {
-        const prodRes = await getGlobalProducts(12, prodCursor, undefined, searchQuery || undefined);
-        newProds = prodRes.products;
-        setProdCursor(prodRes.nextCursor);
-        setHasMoreProducts(prodRes.hasMore);
-      }
+      let newProds = prodRes.products;
+      setProdCursor(prodRes.nextCursor);
+      setHasMoreProducts(prodRes.hasMore);
 
-      if (hasMorePosts) {
-        const postRes = await getGlobalFeedPosts(6, postCursor);
-        let fetchedPosts = postRes.posts;
-        if (searchQuery) {
-          fetchedPosts = postRes.posts.filter(p => 
-            p.caption?.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-        }
-        newPosts = fetchedPosts;
-        setPostCursor(postRes.nextCursor);
-        setHasMorePosts(postRes.hasMore);
+      let fetchedPosts = postRes.posts;
+      if (searchQuery) {
+        fetchedPosts = postRes.posts.filter(p => 
+          p.caption?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
       }
+      let newPosts = fetchedPosts;
+      setPostCursor(postRes.nextCursor);
+      setHasMorePosts(postRes.hasMore);
 
       setProducts(prev => [...prev, ...newProds]);
       setPosts(prev => [...prev, ...newPosts]);

@@ -94,6 +94,9 @@ export default function ExpandedPostContainer() {
         if (!isCurrentlyLiked) {
           toggleLike(postId);
           trackPostLikeKeywords(post.caption);
+          import("@/lib/api/admin").then(({ logActivity }) => {
+            logActivity("post_engage", postId);
+          }).catch(e => console.error(e));
         }
       }
       
@@ -178,6 +181,10 @@ export default function ExpandedPostContainer() {
       const duration = (Date.now() - trackingRef.current.startTime) / 1000;
       if (duration >= 3) {
         trackPostTimeSpentKeywords(trackingRef.current.caption, duration);
+        const pid = trackingRef.current.postId;
+        import("@/lib/api/admin").then(({ logActivity }) => {
+          logActivity("video_watch", pid, duration);
+        }).catch(e => console.error(e));
       }
       trackingRef.current = null;
     }
@@ -208,6 +215,10 @@ export default function ExpandedPostContainer() {
         const duration = (Date.now() - trackingRef.current.startTime) / 1000;
         if (duration >= 3) {
           trackPostTimeSpentKeywords(trackingRef.current.caption, duration);
+          const pid = trackingRef.current.postId;
+          import("@/lib/api/admin").then(({ logActivity }) => {
+            logActivity("video_watch", pid, duration);
+          }).catch(e => console.error(e));
         }
         trackingRef.current = null;
       }
@@ -397,7 +408,7 @@ export default function ExpandedPostContainer() {
                     <video
                       ref={el => { videoRefs.current[idx] = el; }}
                       src={idx <= expandedPostIndex + 1 ? post.media[0] : undefined}
-                      preload={idx === expandedPostIndex || idx === expandedPostIndex + 1 ? "auto" : "none"}
+                      preload={idx === expandedPostIndex ? "auto" : idx === expandedPostIndex + 1 ? "metadata" : "none"}
                       autoPlay={idx === expandedPostIndex}
                       loop
                       playsInline
@@ -549,18 +560,27 @@ export default function ExpandedPostContainer() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-full bg-red-600 overflow-hidden flex items-center justify-center border border-white/20">
-                        {vendor?.logoImage ? (
-                          <img src={vendor.logoImage} alt={vendor.businessName} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-xs font-extrabold text-white">
-                            {vendor?.businessName?.slice(0, 2).toUpperCase() || "TK"}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-sm font-bold truncate max-w-[200px]">
-                        {vendor?.businessName || "Tokoni Vendor"}
-                      </span>
+                      <Link
+                        href={vendor.users ? `/profile/${vendor.users}` : "#"}
+                        className="flex items-center gap-2.5 hover:opacity-85 transition-opacity"
+                        onClick={(e) => {
+                          if (!vendor.users) e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        <div className="w-9 h-9 rounded-full bg-red-600 overflow-hidden flex items-center justify-center border border-white/20 flex-shrink-0">
+                          {vendor?.logoImage ? (
+                            <img src={vendor.logoImage} alt={vendor.businessName} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-xs font-extrabold text-white">
+                              {vendor?.businessName?.slice(0, 2).toUpperCase() || "TK"}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-sm font-bold truncate max-w-[200px]">
+                          {vendor?.businessName || "Tokoni Vendor"}
+                        </span>
+                      </Link>
                       {user && user.$id !== post.vendor && (
                         <button
                           onClick={() => handleFollowToggle(post.vendor)}
@@ -625,18 +645,27 @@ export default function ExpandedPostContainer() {
                     {/* Header */}
                     <div className="flex items-center justify-between border-b border-white/10 pb-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-red-600 overflow-hidden flex items-center justify-center border border-white/20">
-                          {vendor?.logoImage ? (
-                            <img src={vendor.logoImage} alt={vendor.businessName} className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-[10px] font-extrabold text-white">
-                              {vendor?.businessName?.slice(0, 2).toUpperCase() || "TK"}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs font-bold truncate max-w-[180px]">
-                          {vendor?.businessName || "Tokoni Vendor"}
-                        </span>
+                        <Link
+                          href={vendor.users ? `/profile/${vendor.users}` : "#"}
+                          className="flex items-center gap-2.5 hover:opacity-85 transition-opacity"
+                          onClick={(e) => {
+                            if (!vendor.users) e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                        >
+                          <div className="w-8 h-8 rounded-full bg-red-600 overflow-hidden flex items-center justify-center border border-white/20 flex-shrink-0">
+                            {vendor?.logoImage ? (
+                              <img src={vendor.logoImage} alt={vendor.businessName} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[10px] font-extrabold text-white">
+                                {vendor?.businessName?.slice(0, 2).toUpperCase() || "TK"}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs font-bold truncate max-w-[180px]">
+                            {vendor?.businessName || "Tokoni Vendor"}
+                          </span>
+                        </Link>
                         {user && user.$id !== post.vendor && (
                           <button
                             onClick={() => handleFollowToggle(post.vendor)}
@@ -788,6 +817,9 @@ function ExpandedActionSidebar({
     if (!isLiked) {
       spawnHeartParticles();
       trackPostLikeKeywords(post.caption);
+      import("@/lib/api/admin").then(({ logActivity }) => {
+        logActivity("post_engage", post.$id);
+      }).catch(e => console.error(e));
     }
     toggleLike(post.$id);
   };
@@ -809,6 +841,10 @@ function ExpandedActionSidebar({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ postId: post.$id })
     }).catch(err => console.error("Error logging share:", err));
+
+    import("@/lib/api/admin").then(({ logActivity }) => {
+      logActivity("post_engage", post.$id);
+    }).catch(e => console.error(e));
   };
 
   const handleSaveClick = (e: React.MouseEvent) => {

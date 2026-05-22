@@ -85,6 +85,55 @@ export async function createCommentService(
     console.error("Failed to increment post comments count:", err);
   });
 
+  // Trigger notifications
+  try {
+    const postDoc = await databases.getDocument(DATABASE_ID, "post", post);
+    const vendorId = postDoc.vendor;
+    if (vendorId) {
+      const vendorDoc = await databases.getDocument(DATABASE_ID, "vendor", vendorId);
+      const vendorUserId = vendorDoc.users;
+      if (vendorUserId && vendorUserId !== users) {
+        const commenterDoc = await databases.getDocument(DATABASE_ID, "users", users);
+        const commenterName = commenterDoc.username || "A user";
+
+        // Create in-app notification
+        const { createNotificationService } = await import("@/lib/services/notifications.service");
+        await createNotificationService({
+          userId: vendorUserId,
+          senderId: users,
+          type: "post_engagement",
+          title: "New Comment",
+          message: `${commenterName} commented on your post: "${text.slice(0, 40)}"`,
+          link: "/feed",
+        }).catch(console.error);
+
+        // Grouping logic: send email on the 1st comment, and on every 5th comment thereafter
+        const currentComments = typeof postDoc.comments === "number" ? postDoc.comments : parseInt(postDoc.comments || "0", 10);
+        const newCount = currentComments + 1;
+
+        if (newCount === 1 || newCount % 5 === 0) {
+          const vendorUserDoc = await databases.getDocument(DATABASE_ID, "users", vendorUserId);
+          const emailNotificationsEnabled = vendorUserDoc.emailNotifications !== false;
+          if (emailNotificationsEnabled && vendorUserDoc.email) {
+            const { sendPostEngagementEmail } = await import("@/lib/email/events");
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+            const businessName = vendorDoc.businessName || vendorUserDoc.username || "Vendor";
+            await sendPostEngagementEmail(vendorUserDoc.email, {
+              vendorName: businessName,
+              triggerUsername: commenterName,
+              engagementType: "comment",
+              postTitle: postDoc.caption || "your reel",
+              unreadCount: newCount,
+              linkUrl: `${baseUrl}/feed`,
+            }).catch(console.error);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error triggering comment notification event:", err);
+  }
+
   const mapped = mapComment(doc);
   if (!mapped.users) {
     mapped.users = users;

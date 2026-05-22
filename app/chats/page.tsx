@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import ChatsSidebar from "@/components/chats/ChatsSidebar";
 import { useUser } from "@/context/UserContext";
+import NotificationOptInModal from "@/components/chats/NotificationOptInModal";
 
 export default function ChatsPage() {
   const { user, loading } = useUser();
@@ -129,6 +130,9 @@ export default function ChatsPage() {
           </div>
         )}
       </div>
+
+      {/* Browser Notification Permission Opt-in Prompt */}
+      <NotificationOptInModal />
     </div>
   );
 }
