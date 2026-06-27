@@ -62,7 +62,8 @@ export default function PostCard({
     const [videoLoading, setVideoLoading] = useState(true);
     const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
     const vendorId = typeof post.vendor === "string" ? post.vendor : (post.vendor as any)?.$id || "";
-    const vendorUserId = vendorUserIdProp || (typeof post.vendor === "object" && post.vendor ? (post.vendor as any).users : null) || (vendorId?.startsWith("mock-vendor-") ? "mock-user-id" : null);
+    const usersField = vendorUserIdProp || (typeof post.vendor === "object" && post.vendor ? (post.vendor as any).users : null);
+    const vendorUserId = (typeof usersField === 'string' ? usersField : (Array.isArray(usersField) ? (usersField[0]?.$id || usersField[0]) : usersField?.$id)) || (vendorId?.startsWith("mock-vendor-") ? "mock-user-id" : null);
 
     const isFollowing = user?.following?.includes(vendorId) || false;
     const isSaved = user?.savedPosts?.includes(post.$id) || false;

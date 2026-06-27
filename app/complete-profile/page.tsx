@@ -3,7 +3,8 @@
 
 import React, { useState, useEffect } from "react";
 import { User, Store, ArrowRight, ShoppingBag } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter } from 'nextjs-toploader/app';
+
 import { account } from "@/lib/services/auth.service";
 import { useUser } from "@/context/UserContext";
 import { createUserProfile } from "@/lib/services/auth.service";

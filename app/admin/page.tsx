@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from 'nextjs-toploader/app';
+
 import { useUser } from "@/context/UserContext";
 import { 
   Users, 

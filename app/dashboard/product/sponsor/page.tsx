@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'nextjs-toploader/app';
+import { useSearchParams } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { isVendorPremium, calculateSponsorshipPrice, SPONSORSHIP_PRICES, INTERPLATFORM_PRICES, SponsorshipDuration } from '@/lib/services/subscriptions.service';
 import { getVendorProducts } from '@/lib/api/products';

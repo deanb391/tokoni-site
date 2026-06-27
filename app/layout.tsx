@@ -8,6 +8,7 @@ import { ChatProvider } from "@/context/ChatContext";
 import { FeedProvider } from "@/context/FeedContext";
 import { HomeFeedProvider } from "@/context/HomeFeedContext";
 import { ProductsProvider } from "@/context/ProductsContext";
+import AppProgressBar from "@/components/ProgressBar";
 
 const headingFont = Outfit({
   variable: "--font-heading",
@@ -37,6 +38,7 @@ export default function RootLayout({
       className={`${headingFont.variable} ${bodyFont.variable} h-full antialiased overflow-x-hidden`}
     >
       <body className="min-h-full flex flex-col w-full overflow-x-hidden">
+        <AppProgressBar />
         <UserProvider>
           <PostPublishProvider>
             <ChatProvider>

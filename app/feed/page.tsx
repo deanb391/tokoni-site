@@ -3,7 +3,8 @@
 import React, { useEffect, useRef } from "react";
 import { useFeed } from "@/context/FeedContext";
 import { useUser } from "@/context/UserContext";
-import { useRouter } from "next/navigation";
+import { useRouter } from 'nextjs-toploader/app';
+
 import PostCard from "@/components/PostCard";
 import ExpandedPostContainer from "@/components/ExpandedPostContainer";
 import ReelsTray from "@/components/ReelsTray";

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'nextjs-toploader/app';
+
 import { useUser } from '@/context/UserContext';
 import { useChat } from '@/context/ChatContext';
 import { getVendorById } from '@/lib/api/vendors';

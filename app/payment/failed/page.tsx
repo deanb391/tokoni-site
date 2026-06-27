@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useEffect, useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'nextjs-toploader/app';
+import { useSearchParams } from 'next/navigation';
 
 function PaymentFailedForm() {
     const router = useRouter();

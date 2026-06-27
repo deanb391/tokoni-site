@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from 'nextjs-toploader/app';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useChat } from "@/context/ChatContext";
 import { useUser } from "@/context/UserContext";
 import ChatsSidebar from "@/components/chats/ChatsSidebar";

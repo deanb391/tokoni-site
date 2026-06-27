@@ -4,7 +4,8 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { createPost } from "@/lib/api/posts";
 import { Post, PostDraft } from "@/lib/services/posts.service";
-import { useRouter } from "next/navigation";
+import { useRouter } from 'nextjs-toploader/app';
+
 
 export interface UploadingFile {
   id: string;

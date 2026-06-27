@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'nextjs-toploader/app';
+
 import { useUser } from '@/context/UserContext';
 import { editVendor } from '@/lib/api/vendors';
 import { uploadToServer } from '@/lib/upload';
@@ -592,11 +593,11 @@ export default function VendorDashboardScreen() {
                                 {/* Stats */}
                                 <div style={{ display: 'flex', gap: '2rem', justifyContent: mobile ? 'center' : 'flex-start' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontSize: '16px', fontWeight: '700', color: '#111' }}>12.4K</span>
+                                        <span style={{ fontSize: '16px', fontWeight: '700', color: '#111' }}>{vendor.followersCount || 0}</span>
                                         <span style={{ fontSize: '13px', color: '#666' }}>Followers</span>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontSize: '16px', fontWeight: '700', color: '#111' }}>450</span>
+                                        <span style={{ fontSize: '16px', fontWeight: '700', color: '#111' }}>{user.following?.length || 0}</span>
                                         <span style={{ fontSize: '13px', color: '#666' }}>Following</span>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -969,7 +970,43 @@ export default function VendorDashboardScreen() {
                             );
                         })()}
 
-                        {activeTab !== 'Products' && activeTab !== 'Posts' && (
+                        {activeTab === 'Settings' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', maxWidth: '700px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                    <h2 style={{ fontSize: '22px', fontWeight: '700', color: '#111', margin: 0 }}>Store Settings</h2>
+                                </div>
+                                
+                                {/* Subscription Setting Item */}
+                                <div onClick={() => router.push('/dashboard/subscription')} style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #EDEDED', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s' }} onMouseOver={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; e.currentTarget.style.transform = 'translateY(-1px)'; }} onMouseOut={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: isVendorPremium(vendor) ? 'rgba(255, 215, 0, 0.1)' : '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <CrownIcon color={isVendorPremium(vendor) ? '#FFD700' : '#666'} />
+                                        </div>
+                                        <div>
+                                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#111', margin: '0 0 4px 0' }}>Store Plan: {isVendorPremium(vendor) ? 'Premium' : 'Free'}</h3>
+                                            <p style={{ fontSize: '13.5px', color: '#666', margin: 0 }}>Manage your store subscription and billing details.</p>
+                                        </div>
+                                    </div>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#CCC" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                </div>
+
+                                {/* Sponsor Setting Item */}
+                                <div onClick={() => router.push('/dashboard/product/sponsor')} style={{ backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #EDEDED', padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s' }} onMouseOver={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)'; e.currentTarget.style.transform = 'translateY(-1px)'; }} onMouseOut={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'rgba(124, 58, 237, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <ZapIcon color="#7C3AED" />
+                                        </div>
+                                        <div>
+                                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#111', margin: '0 0 4px 0' }}>Store Visibility</h3>
+                                            <p style={{ fontSize: '13.5px', color: '#666', margin: 0 }}>Sponsor listings to boost your reach and sales.</p>
+                                        </div>
+                                    </div>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#CCC" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab !== 'Products' && activeTab !== 'Posts' && activeTab !== 'Settings' && (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6rem 2rem', backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #EDEDED', textAlign: 'center' }}>
                                 <span style={{ fontSize: '48px', marginBottom: '1rem' }}>📦</span>
                                 <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#111', margin: '0 0 0.5rem 0' }}>{activeTab} Management</h3>
@@ -978,193 +1015,6 @@ export default function VendorDashboardScreen() {
                                 </p>
                             </div>
                         )}
-                    </div>
-
-                    {/* Right Column: Sidebar Actions */}
-                    <div style={{ width: mobile ? '100%' : '320px', display: 'flex', flexDirection: 'column', gap: '1.5rem', flexShrink: 0 }}>
-                        {/* Subscription Card */}
-                        {(() => {
-                            const isPremium = isVendorPremium(vendor);
-                            return (
-                                <div style={{
-                                    borderRadius: '20px',
-                                    padding: '1.5rem',
-                                    background: isPremium
-                                        ? 'linear-gradient(135deg, #1F070A 0%, #3D0B12 100%)'
-                                        : '#FFFFFF',
-                                    border: isPremium
-                                        ? '1px solid rgba(255, 215, 0, 0.2)'
-                                        : '1px solid #EDEDED',
-                                    boxShadow: isPremium
-                                        ? '0 10px 30px rgba(185, 0, 27, 0.15)'
-                                        : '0 4px 20px rgba(0,0,0,0.02)',
-                                    position: 'relative',
-                                    overflow: 'hidden',
-                                    transition: 'all 0.3s ease',
-                                }}>
-                                    {isPremium && (
-                                        <>
-                                            <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'rgba(255, 215, 0, 0.05)', filter: 'blur(20px)' }} />
-                                            <div style={{ position: 'absolute', bottom: '-40px', left: '-20px', width: '90px', height: '90px', borderRadius: '50%', backgroundColor: 'rgba(185, 0, 27, 0.2)', filter: 'blur(15px)' }} />
-                                        </>
-                                    )}
-
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                                        <div style={{
-                                            width: '36px',
-                                            height: '36px',
-                                            borderRadius: '10px',
-                                            backgroundColor: isPremium ? 'rgba(255, 215, 0, 0.1)' : '#FFF0F2',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            flexShrink: 0
-                                        }}>
-                                            <CrownIcon color={isPremium ? '#FFD700' : '#B9001B'} />
-                                        </div>
-                                        <div>
-                                            <h4 style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.75px', color: isPremium ? '#FFD700' : '#888', margin: '0 0 2px 0' }}>
-                                                Store Plan
-                                            </h4>
-                                            <p style={{ fontSize: '16px', fontWeight: '800', color: isPremium ? '#FFFFFF' : '#111111', margin: 0 }}>
-                                                {isPremium ? '✦ Premium' : 'Free Account'}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <p style={{
-                                        fontSize: '13px',
-                                        lineHeight: '1.5',
-                                        color: isPremium ? 'rgba(255, 255, 255, 0.75)' : '#666666',
-                                        margin: '0 0 1.25rem 0'
-                                    }}>
-                                        {isPremium
-                                            ? 'Your storefront has unlimited listings, posts, and a 50% discount on product sponsorships.'
-                                            : 'List up to 15 products and 20 posts. Upgrade to unlock unlimited access and sponsored list discounts.'
-                                        }
-                                    </p>
-
-                                    <button
-                                        onClick={() => router.push('/dashboard/subscription')}
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.75rem 1rem',
-                                            borderRadius: '12px',
-                                            border: isPremium ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
-                                            backgroundColor: isPremium ? 'rgba(255, 255, 255, 0.08)' : '#B9001B',
-                                            color: '#FFFFFF',
-                                            fontSize: '13.5px',
-                                            fontWeight: '700',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s ease',
-                                            boxShadow: isPremium ? 'none' : '0 4px 12px rgba(185, 0, 27, 0.15)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '6px'
-                                        }}
-                                        onMouseOver={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(-1px)';
-                                            if (isPremium) {
-                                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
-                                            } else {
-                                                e.currentTarget.style.backgroundColor = '#9a0014';
-                                                e.currentTarget.style.boxShadow = '0 6px 16px rgba(185, 0, 27, 0.25)';
-                                            }
-                                        }}
-                                        onMouseOut={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                            if (isPremium) {
-                                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
-                                            } else {
-                                                e.currentTarget.style.backgroundColor = '#B9001B';
-                                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(185, 0, 27, 0.15)';
-                                            }
-                                        }}
-                                    >
-                                        {isPremium ? 'Manage Subscription' : 'Upgrade to Premium 👑'}
-                                    </button>
-                                </div>
-                            );
-                        })()}
-
-                        {/* Sponsorship Card */}
-                        <div style={{
-                            borderRadius: '20px',
-                            padding: '1.5rem',
-                            background: 'linear-gradient(135deg, #0F0E1C 0%, #1A153A 100%)',
-                            border: '1px solid rgba(124, 58, 237, 0.2)',
-                            boxShadow: '0 10px 30px rgba(124, 58, 237, 0.1)',
-                            position: 'relative',
-                            overflow: 'hidden',
-                            transition: 'all 0.3s ease',
-                        }}>
-                            <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'rgba(124, 58, 237, 0.08)', filter: 'blur(20px)' }} />
-                            <div style={{ position: 'absolute', bottom: '-40px', left: '-20px', width: '90px', height: '90px', borderRadius: '50%', backgroundColor: 'rgba(167, 139, 250, 0.05)', filter: 'blur(15px)' }} />
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                                <div style={{
-                                    width: '36px',
-                                    height: '36px',
-                                    borderRadius: '10px',
-                                    backgroundColor: 'rgba(124, 58, 237, 0.15)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flexShrink: 0
-                                }}>
-                                    <ZapIcon color="#C084FC" />
-                                </div>
-                                <div>
-                                    <h4 style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.75px', color: '#A78BFA', margin: '0 0 2px 0' }}>
-                                        Store Visibility
-                                    </h4>
-                                    <p style={{ fontSize: '16px', fontWeight: '800', color: '#FFFFFF', margin: 0 }}>
-                                        Sponsor Listings
-                                    </p>
-                                </div>
-                            </div>
-
-                            <p style={{
-                                fontSize: '13px',
-                                lineHeight: '1.5',
-                                color: 'rgba(255, 255, 255, 0.75)',
-                                margin: '0 0 1.25rem 0'
-                            }}>
-                                Feature your product listings on the global feed and categories. Sponsored products receive up to 5x more customer views.
-                            </p>
-
-                            <button
-                                onClick={() => router.push('/dashboard/product/sponsor')}
-                                style={{
-                                    width: '100%',
-                                    padding: '0.75rem 1rem',
-                                    borderRadius: '12px',
-                                    border: 'none',
-                                    background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
-                                    color: '#FFFFFF',
-                                    fontSize: '13.5px',
-                                    fontWeight: '700',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    boxShadow: '0 4px 12px rgba(124, 58, 237, 0.2)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '6px'
-                                }}
-                                onMouseOver={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(-1px)';
-                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(124, 58, 237, 0.35)';
-                                }}
-                                onMouseOut={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(124, 58, 237, 0.2)';
-                                }}
-                            >
-                                Sponsor a Product ⚡
-                            </button>
-                        </div>
                     </div>
 
                 </div>

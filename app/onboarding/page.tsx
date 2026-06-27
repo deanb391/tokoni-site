@@ -4,7 +4,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import logoImg from "@/assets/images/tokoni_logo.png";
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'nextjs-toploader/app';
+
 import { useUser } from '@/context/UserContext';
 import { createVendor } from '@/lib/api/vendors';
 import { uploadToServer } from '@/lib/upload';

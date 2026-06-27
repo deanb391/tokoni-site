@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'nextjs-toploader/app';
+
 import { signIn, googleSignIn } from '@/lib/services/auth.service';
 import { useUser } from '@/context/UserContext';
 import Image from 'next/image';

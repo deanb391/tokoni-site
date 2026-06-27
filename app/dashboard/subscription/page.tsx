@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'nextjs-toploader/app';
+import { useSearchParams } from 'next/navigation';
 import { useUser } from '@/context/UserContext';
 import { isVendorPremium, SUBSCRIPTION_PRICE_NGN, FREE_TIER_LIMITS, TokoniPayment } from '@/lib/services/subscriptions.service';
 

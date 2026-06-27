@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'nextjs-toploader/app';
+
 import { useUser } from '@/context/UserContext';
 import { getProductsByIds } from '@/lib/api/products';
 import { getPostsByIds } from '@/lib/api/posts';

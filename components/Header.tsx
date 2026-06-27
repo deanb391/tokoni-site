@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'nextjs-toploader/app';
+import { usePathname } from 'next/navigation';
 import logoImg from "@/assets/images/tokoni_logo.png";
 import { useUser } from '@/context/UserContext';
 import { useChat } from '@/context/ChatContext';

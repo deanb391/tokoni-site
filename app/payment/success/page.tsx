@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useEffect, useState, useRef, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'nextjs-toploader/app';
+import { useSearchParams } from 'next/navigation';
 
 const CONFETTI_COLORS = ['#B9001B', '#FFD700', '#FF4D6D', '#FF8FA3', '#FFF'];
 

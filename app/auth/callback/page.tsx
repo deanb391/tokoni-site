@@ -2,7 +2,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from 'nextjs-toploader/app';
+
 import { handleOAuthSignIn } from "@/lib/services/auth.service";
 import { useUser } from "@/context/UserContext";
 

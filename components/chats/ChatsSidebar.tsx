@@ -4,7 +4,8 @@
 import React, { useState } from "react";
 import { useChat } from "@/context/ChatContext";
 import { useUser } from "@/context/UserContext";
-import { useRouter } from "next/navigation";
+import { useRouter } from 'nextjs-toploader/app';
+
 import { Chat } from "@/lib/services/chats.service";
 
 // --- Inline SVGs for Icons ---

@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'nextjs-toploader/app';
+
 import { ShoppingBag, User, Mail, Lock, Store, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { createUser, googleSignIn } from '@/lib/services/auth.service';
 import { useUser } from '@/context/UserContext';

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'nextjs-toploader/app';
+
 import { useUser } from '@/context/UserContext';
 import { account, updateUser, updateAccountPassword, signIn } from '@/lib/services/auth.service';
 import { uploadToServer } from '@/lib/upload';

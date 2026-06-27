@@ -9,7 +9,8 @@ import { getProductsByIds } from '@/lib/api/products';
 import ProductCard from '@/components/ProductCard';
 import PostCard from '@/components/PostCard';
 import { Search, Loader2, Sparkles, AlertCircle, MessageSquare, X, Star } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'nextjs-toploader/app';
+
 
 export default function HomeFeedScreen() {
     const router = useRouter();
